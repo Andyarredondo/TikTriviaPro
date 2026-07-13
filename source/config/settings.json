@@ -1,0 +1,33 @@
+{
+    "application": {
+        "name": "TikTrivia Pro",
+        "version": "0.1.0",
+        "environment": "development"
+    },
+
+    "server": {
+        "host": "127.0.0.1",
+        "port": 8000,
+        "auto_open_browser": true
+    },
+
+    "database": {
+        "engine": "sqlite",
+        "filename": "tiktrivia.db"
+    },
+
+    "tikfinity": {
+        "enabled": true,
+        "websocket_url": "ws://localhost:21213/"
+    },
+
+    "game": {
+        "question_timer_seconds": 20,
+        "points_for_correct_answer": 10,
+        "allow_one_answer_per_contestant": true
+    },
+
+    "logging": {
+        "level": "INFO"
+    }
+}
