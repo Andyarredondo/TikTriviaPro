@@ -152,18 +152,25 @@ html,body{
 
 }
 
-.contestant-row{
+.contestant-mode select{
 
-    display:flex;
+    margin-top:8px;
 
-    justify-content:space-between;
+    width:100%;
 
-    padding:10px 0;
+    padding:10px 12px;
 
-    border-bottom:1px solid #3c3c3c;
+    border-radius:8px;
+
+    border:1px solid #494949;
+
+    background:#252525;
+
+    color:white;
+
+    font-size:16px;
 
 }
-
 .placeholder{
 
     color:#999;
@@ -341,9 +348,21 @@ html,body{
 
 }
 
-.right-panel button:hover{
+.right-panel button:hover:not(:disabled){
 
     background:#4f4f4f;
+
+}
+
+.right-panel button:disabled{
+
+    background:#2f2f2f;
+
+    color:#8a8a8a;
+
+    opacity:.68;
+
+    cursor:not-allowed;
 
 }
 

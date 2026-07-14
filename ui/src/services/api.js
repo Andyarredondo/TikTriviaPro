@@ -149,6 +149,16 @@ contestants: {
 
         },
 
+        setRegistrationMode(mode) {
+
+            return request(`/api/family-feud/registration_mode/${mode}`, {
+
+                method: "POST",
+
+            });
+
+        },
+
     },
 
 };

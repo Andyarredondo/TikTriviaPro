@@ -56,6 +56,7 @@ class GameState:
         self.board = None
         self.running = False
         self.question_open = False
+        self.registration_mode = "Hybrid"
         self.timer_seconds = 0
         self.question_number = 0
         self.answers_found: list[int] = []
@@ -253,6 +254,7 @@ class GameState:
                 "survey_question",
                 None,
             ),
+            "registration_mode": self.registration_mode,
             "answers_found": list(self.answers_found),
             "correct_players": dict(self.correct_players),
             "remaining_answers": self.remaining_answers(),

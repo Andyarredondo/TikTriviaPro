@@ -236,6 +236,35 @@ def reveal_remaining():
 
     )
 # ---------------------------------------------------------
+# Registration Mode
+# ---------------------------------------------------------
+
+@router.post("/registration_mode/{mode}")
+def set_registration_mode(mode: str):
+
+    normalized_mode = mode.capitalize()
+
+    if normalized_mode not in ("Auto", "Manual", "Hybrid"):
+
+        return failure(
+
+            message="Invalid registration mode.",
+
+            status_code=400,
+
+        )
+
+    GAME.registration_mode = normalized_mode
+
+    return success(
+
+        data=GAME.status(),
+
+        message="Registration mode updated.",
+
+    )
+
+# ---------------------------------------------------------
 # Individual Answer Reveal
 # ---------------------------------------------------------
 

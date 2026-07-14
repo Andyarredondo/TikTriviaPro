@@ -94,6 +94,10 @@ export default function HostDashboard() {
         return `${minutes}:${remainingSeconds}`;
     }, [gameStatus]);
 
+    const boardLocked =
+        gameStatus?.board_loaded === true &&
+        gameStatus?.question_open === true;
+
     async function openRound() {
         try {
             await api.familyFeud.openRound();
@@ -184,7 +188,33 @@ export default function HostDashboard() {
                     <div className="contestant-mode">
                         Registration Mode
                         <br />
-                        <b>Hybrid</b>
+                        <select
+                            value={
+                                gameStatus?.registration_mode || "Hybrid"
+                            }
+                            onChange={async (event) => {
+                                const nextMode = event.target.value;
+
+                                try {
+                                    const updatedStatus = await api.familyFeud.setRegistrationMode(
+                                        nextMode
+                                    );
+
+                                    setGameStatus(updatedStatus);
+                                    setErrorMessage("");
+                                } catch (error) {
+                                    console.error(error);
+                                    setErrorMessage(
+                                        error.message ||
+                                            "Unable to update registration mode."
+                                    );
+                                }
+                            }}
+                        >
+                            <option value="Auto">Auto</option>
+                            <option value="Manual">Manual</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
                     </div>
 
                     <hr />
@@ -325,6 +355,12 @@ export default function HostDashboard() {
                                 api.familyFeud.previousBoard
                             )
                         }
+                        disabled={boardLocked}
+                        title={
+                            boardLocked
+                                ? "Close the current board before changing boards."
+                                : undefined
+                        }
                     >
                         ⏮ Previous Board
                     </button>
@@ -333,6 +369,12 @@ export default function HostDashboard() {
                         type="button"
                         onClick={() =>
                             loadBoard(api.familyFeud.nextBoard)
+                        }
+                        disabled={boardLocked}
+                        title={
+                            boardLocked
+                                ? "Close the current board before changing boards."
+                                : undefined
                         }
                     >
                         ⏭ Next Board
