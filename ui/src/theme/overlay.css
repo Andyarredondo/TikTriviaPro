@@ -1,14 +1,16 @@
 /* ===========================================================
    Andy the Renaissance Man
-   TikTok LIVE Overlay v2
+   Friendly Feud Viewer Overlay
    =========================================================== */
 
 .overlay-board{
-    width:min(900px,92vw);
+    width:min(920px,94vw);
     margin:0 auto;
     display:flex;
+    flex:1;
     flex-direction:column;
-    gap:20px;
+    justify-content:center;
+    gap:18px;
     position:relative;
 }
 
@@ -16,108 +18,170 @@
 .overlay-board::after{
     content:"";
     position:absolute;
-    top:0;
-    bottom:0;
-    width:6px;
+    top:6%;
+    bottom:6%;
+    width:5px;
     border-radius:999px;
+    opacity:.55;
     background:linear-gradient(
         to bottom,
         transparent,
+        var(--rrn-gold-dark),
         var(--rrn-gold),
+        var(--rrn-gold-dark),
         transparent
     );
-    opacity:.55;
+    pointer-events:none;
 }
 
-.overlay-board::before{ left:-24px; }
-.overlay-board::after{ right:-24px; }
+.overlay-board::before{
+    left:-24px;
+}
+
+.overlay-board::after{
+    right:-24px;
+}
 
 .overlay-category{
-    align-self:center;
-    padding:8px 22px;
+    min-width:260px;
+    max-width:80%;
+    padding:9px 24px;
     border:2px solid var(--rrn-gold);
     border-radius:999px;
-    background:linear-gradient(
-        180deg,
-        rgba(212,175,55,.18),
-        rgba(212,175,55,.05)
-    );
+    background:
+        linear-gradient(
+            180deg,
+            rgba(212,175,55,.18),
+            rgba(212,175,55,.05)
+        );
     color:var(--rrn-gold);
-    text-transform:uppercase;
-    letter-spacing:3px;
     font-weight:700;
+    letter-spacing:3px;
+    text-align:center;
+    text-transform:uppercase;
+    box-shadow:
+        0 0 14px rgba(212,175,55,.16),
+        inset 0 0 12px rgba(255,255,255,.03);
 }
 
-.question-scroll{
-    position:relative;
-}
-
-.question-scroll::before{
-    content:"";
-    position:absolute;
-    left:16px;
-    right:16px;
-    top:10px;
-    height:1px;
-    background:rgba(212,175,55,.30);
+.overlay-answer-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
 }
 
 .answer-plaque{
-    min-height:72px;
+    min-height:68px;
+    position:relative;
+    overflow:hidden;
     backdrop-filter:blur(3px);
 }
 
 .answer-plaque.revealed{
-    animation:plaqueReveal .35s ease-out;
+    animation:plaque-reveal .35s ease-out;
 }
 
-@keyframes plaqueReveal{
-    from{
-        transform:scale(.96);
-        opacity:.4;
-    }
-    to{
-        transform:scale(1);
-        opacity:1;
-    }
+.answer-plaque.revealed::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(
+        105deg,
+        transparent 15%,
+        rgba(255,255,255,.16) 45%,
+        transparent 75%
+    );
+    transform:translateX(125%);
+    animation:reveal-shimmer .7s ease-out;
+    pointer-events:none;
 }
 
 .overlay-board-code{
-    margin-top:10px;
-    text-align:center;
-    color:rgba(243,231,196,.55);
+    margin-top:4px;
+    color:rgba(243,231,196,.48);
+    font-size:.82rem;
     letter-spacing:2px;
-    font-size:.9rem;
+    text-align:center;
+    text-transform:uppercase;
 }
 
-@media (max-width:1080px){
+@keyframes plaque-reveal{
+    from{
+        opacity:.35;
+        transform:scale(.97);
+    }
 
+    to{
+        opacity:1;
+        transform:scale(1);
+    }
+}
+
+@keyframes reveal-shimmer{
+    from{
+        transform:translateX(-125%);
+    }
+
+    to{
+        transform:translateX(125%);
+    }
+}
+
+@media (max-width:900px){
     .overlay-board{
-        width:96%;
+        width:96vw;
+        gap:14px;
     }
-
-    .answer-plaque{
-        min-height:64px;
-    }
-
-    .question-text{
-        font-size:1.45rem;
-    }
-
-}
-
-@media (max-width:720px){
 
     .overlay-board::before,
     .overlay-board::after{
         display:none;
     }
 
-    .broadcast-layout{
-        padding:10px;
+    .answer-plaque{
+        min-height:60px;
+    }
+}
+
+@media (max-width:720px){
+    .overlay-board{
+        justify-content:flex-start;
+        padding-top:8px;
+    }
+
+    .overlay-category{
+        min-width:200px;
+        max-width:92%;
+        padding:7px 16px;
+        font-size:.85rem;
+        letter-spacing:2px;
     }
 
     .question-scroll{
         padding:18px;
+    }
+
+    .question-text{
+        font-size:1.35rem;
+        line-height:1.3;
+    }
+
+    .answer-plaque{
+        grid-template-columns:46px 1fr 58px;
+        min-height:54px;
+        padding:10px 12px;
+    }
+
+    .answer-rank{
+        font-size:1.25rem;
+    }
+
+    .answer-text{
+        font-size:1rem;
+        letter-spacing:1px;
+    }
+
+    .answer-score{
+        font-size:1rem;
     }
 }
