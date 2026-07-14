@@ -123,30 +123,30 @@ body{
     background:
       linear-gradient(180deg,#222,#171717);
     border:2px solid var(--rrn-bronze);
-    border-radius:clamp(6px,1.5cqw,14px);
+    border-radius:1.5cqw;
     display:grid;
-    grid-template-columns:clamp(32px,8cqw,56px) 1fr clamp(36px,9cqw,64px);
+    grid-template-columns:8cqw 1fr 9cqw;
     align-items:center;
-    padding:clamp(6px,1.5%,14px) clamp(8px,2%,18px);
-    gap:clamp(4px,1cqw,10px);
+    padding:1.5% 2%;
+    gap:1cqw;
 }
 
 .answer-rank{
-    font-size:clamp(0.85rem,3.5cqw,1.5rem);
+    font-size:3.5cqw;
     font-weight:700;
     color:var(--rrn-gold);
     text-align:center;
 }
 
 .answer-text{
-    font-size:clamp(0.75rem,3cqw,1.3rem);
-    letter-spacing:clamp(0.5px,0.3cqw,2px);
+    font-size:3cqw;
+    letter-spacing:0.3cqw;
     color:var(--rrn-ivory);
     word-break:break-word;
 }
 
 .answer-score{
-    font-size:clamp(0.75rem,3cqw,1.3rem);
+    font-size:3cqw;
     font-weight:700;
     color:var(--rrn-gold);
     text-align:right;

@@ -54,18 +54,18 @@ export default function FriendlyFeudOverlay({
                             />
                         ))}
                     </div>
+
+                    {status?.question_open && (
+                        <div className="ff-status-bar">
+                            <span className="live-indicator">🟢 LIVE</span>
+                            <span className="ff-timer">⏱ {timer}</span>
+                            <span className="ff-found">✓ {foundCount}/{totalCount}</span>
+                        </div>
+                    )}
                 </>
             ) : (
                 <div className="ff-empty">
                     Waiting for next board…
-                </div>
-            )}
-
-            {status?.question_open && (
-                <div className="ff-status-bar">
-                    <span className="live-indicator">🟢 LIVE</span>
-                    <span className="ff-timer">⏱ {timer}</span>
-                    <span className="ff-found">✓ {foundCount}/{totalCount}</span>
                 </div>
             )}
 

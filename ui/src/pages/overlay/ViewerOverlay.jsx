@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useState } from "react";
 
 import { api } from "../../services/api";
 import FriendlyFeudOverlay from "../../components/FriendlyFeud/FriendlyFeudOverlay";
@@ -11,6 +11,22 @@ export default function ViewerOverlay() {
 
     const [board, setBoard] = useState(null);
     const [status, setStatus] = useState(null);
+
+    // theme.css sets html,body,#root { height:100% } and body { overflow:hidden }
+    // and a dark body background — all designed for the host dashboard.
+    // Override those here so the overlay page sizes to its content and the body
+    // is transparent so the stream shows through.
+    useLayoutEffect(() => {
+        const html = document.documentElement;
+        const body = document.body;
+        const root = document.getElementById("root");
+
+        html.style.height = "auto";
+        body.style.height = "auto";
+        body.style.overflow = "visible";
+        body.style.background = "transparent";
+        if (root) root.style.height = "auto";
+    }, []);
 
     const refresh = useCallback(async () => {
         try {
@@ -35,28 +51,9 @@ export default function ViewerOverlay() {
     }, [refresh]);
 
     return (
-        <div
-            style={{
-                width: "100vw",
-                height: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "transparent",
-                overflow: "hidden",
-            }}
-        >
-            {/* 1:1 square canvas — centered, never distorts */}
-            <div
-                style={{
-                    aspectRatio: "1 / 1",
-                    height: "min(100vh, 100vw)",
-                    width: "min(100vw, 100vh)",
-                    position: "relative",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                }}
-            >
+        <div style={{ display: "flex", justifyContent: "center", background: "transparent" }}>
+            {/* width-constrained canvas — height follows content naturally */}
+            <div style={{ width: "min(100vw, 100vh)", flexShrink: 0 }}>
                 {status?.viewer_overlay_state === "STANDBY" ? (
                     <StandbyOverlay />
                 ) : (
