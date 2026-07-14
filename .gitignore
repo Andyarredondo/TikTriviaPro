@@ -1,54 +1,40 @@
-# ==========================================================
-# TikTrivia Pro
-# Git Ignore File
-# Version 0.1.0
-# ==========================================================
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Virtual Environment
+﻿# Python
 .venv/
 venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
-# Environment Variables
+# Node / React
+ui/node_modules/
+ui/dist/
+ui/.vite/
+
+# Local environment and secrets
 .env
 .env.*
+!.env.example
 
-# SQLite Databases
+# Databases and runtime data
 *.db
 *.sqlite
 *.sqlite3
+database/
+data/
+logs/
 
-# Logs
-logs/*
-!logs/.gitkeep
+# Imports, exports, and backups
+imports/
+exports/
+backups/
 
-# Backups
-backups/*
-!backups/.gitkeep
-
-# Releases
-releases/*
-!releases/.gitkeep
-
-# Imports / Exports
-imports/*
-!imports/.gitkeep
-
-exports/*
-!exports/.gitkeep
-
-# VS Code Workspace Settings
+# IDE and operating system
 .vscode/
-
-# Windows
+.idea/
+.DS_Store
 Thumbs.db
-Desktop.ini
 
-# Temporary Files
+# Temporary files
 *.tmp
 *.temp
-~$*
+*.log

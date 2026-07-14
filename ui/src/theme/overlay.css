@@ -1,0 +1,123 @@
+/* ===========================================================
+   Andy the Renaissance Man
+   TikTok LIVE Overlay v2
+   =========================================================== */
+
+.overlay-board{
+    width:min(900px,92vw);
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    position:relative;
+}
+
+.overlay-board::before,
+.overlay-board::after{
+    content:"";
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:6px;
+    border-radius:999px;
+    background:linear-gradient(
+        to bottom,
+        transparent,
+        var(--rrn-gold),
+        transparent
+    );
+    opacity:.55;
+}
+
+.overlay-board::before{ left:-24px; }
+.overlay-board::after{ right:-24px; }
+
+.overlay-category{
+    align-self:center;
+    padding:8px 22px;
+    border:2px solid var(--rrn-gold);
+    border-radius:999px;
+    background:linear-gradient(
+        180deg,
+        rgba(212,175,55,.18),
+        rgba(212,175,55,.05)
+    );
+    color:var(--rrn-gold);
+    text-transform:uppercase;
+    letter-spacing:3px;
+    font-weight:700;
+}
+
+.question-scroll{
+    position:relative;
+}
+
+.question-scroll::before{
+    content:"";
+    position:absolute;
+    left:16px;
+    right:16px;
+    top:10px;
+    height:1px;
+    background:rgba(212,175,55,.30);
+}
+
+.answer-plaque{
+    min-height:72px;
+    backdrop-filter:blur(3px);
+}
+
+.answer-plaque.revealed{
+    animation:plaqueReveal .35s ease-out;
+}
+
+@keyframes plaqueReveal{
+    from{
+        transform:scale(.96);
+        opacity:.4;
+    }
+    to{
+        transform:scale(1);
+        opacity:1;
+    }
+}
+
+.overlay-board-code{
+    margin-top:10px;
+    text-align:center;
+    color:rgba(243,231,196,.55);
+    letter-spacing:2px;
+    font-size:.9rem;
+}
+
+@media (max-width:1080px){
+
+    .overlay-board{
+        width:96%;
+    }
+
+    .answer-plaque{
+        min-height:64px;
+    }
+
+    .question-text{
+        font-size:1.45rem;
+    }
+
+}
+
+@media (max-width:720px){
+
+    .overlay-board::before,
+    .overlay-board::after{
+        display:none;
+    }
+
+    .broadcast-layout{
+        padding:10px;
+    }
+
+    .question-scroll{
+        padding:18px;
+    }
+}

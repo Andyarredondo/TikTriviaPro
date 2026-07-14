@@ -5,87 +5,181 @@
 
     <meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
     <title>{{ title }}</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/css/main.css"
-    >
+    <link rel="stylesheet" href="/static/css/style.css">
 
 </head>
 
 <body>
 
-    <main class="container">
+<div class="page">
 
-        <div class="card">
+    <header class="header">
 
-            <div class="status">
+        <h1>TikTrivia Pro</h1>
 
-                <div class="dot"></div>
+        <div class="version">
 
-                <span>Application Running</span>
-
-            </div>
-
-            <h1>{{ title }}</h1>
-
-            <h2>Professional TikTok LIVE Trivia Control System</h2>
-
-            <div class="version">
-
-                Version {{ version }}
-
-            </div>
-
-            <hr>
-
-            <div class="grid">
-
-                <div class="panel">
-
-                    <h3>Backend</h3>
-
-                    <p>FastAPI</p>
-
-                </div>
-
-                <div class="panel">
-
-                    <h3>Database</h3>
-
-                    <p>SQLite</p>
-
-                </div>
-
-                <div class="panel">
-
-                    <h3>Chat</h3>
-
-                    <p>TikFinity</p>
-
-                </div>
-
-                <div class="panel">
-
-                    <h3>Status</h3>
-
-                    <p>Ready</p>
-
-                </div>
-
-            </div>
+            Version {{ version }}
 
         </div>
 
-    </main>
+    </header>
 
-<script src="/static/js/main.js"></script>
+    <div class="layout">
+
+        <!-- LEFT PANEL -->
+
+        <aside class="left-panel">
+
+            <h2>Contestants</h2>
+
+            <div id="contestants">
+
+                Waiting for players...
+
+            </div>
+
+        </aside>
+
+        <!-- CENTER PANEL -->
+
+        <main class="center-panel">
+
+            <div class="board-header">
+
+                <div>
+
+                    <strong>Board</strong>
+
+                    <span id="board-id">None Loaded</span>
+
+                </div>
+
+                <div>
+
+                    <strong>Category</strong>
+
+                    <span id="category">---</span>
+
+                </div>
+
+            </div>
+
+            <div class="question">
+
+                <h2 id="survey-question">
+
+                    Click "Next Board"
+
+                </h2>
+
+            </div>
+
+            <div class="answers">
+
+                <div class="answer-row">
+
+                    <span class="rank">1</span>
+
+                    <span id="answer1">██████████████████</span>
+
+                </div>
+
+                <div class="answer-row">
+
+                    <span class="rank">2</span>
+
+                    <span id="answer2">██████████████████</span>
+
+                </div>
+
+                <div class="answer-row">
+
+                    <span class="rank">3</span>
+
+                    <span id="answer3">██████████████████</span>
+
+                </div>
+
+                <div class="answer-row">
+
+                    <span class="rank">4</span>
+
+                    <span id="answer4">██████████████████</span>
+
+                </div>
+
+                <div class="answer-row">
+
+                    <span class="rank">5</span>
+
+                    <span id="answer5">██████████████████</span>
+
+                </div>
+
+            </div>
+
+            <div class="strikes">
+
+                <span id="strike1">◯</span>
+
+                <span id="strike2">◯</span>
+
+                <span id="strike3">◯</span>
+
+            </div>
+
+        </main>
+
+        <!-- RIGHT PANEL -->
+
+        <aside class="right-panel">
+
+            <h2>Host Controls</h2>
+
+            <button id="next-board">
+
+                Next Board
+
+            </button>
+
+            <button id="open-question">
+
+                Open Question
+
+            </button>
+
+            <button id="close-question">
+
+                Close Question
+
+            </button>
+
+            <button id="reset-board">
+
+                Reset Board
+
+            </button>
+
+            <hr>
+
+            <h3>Status</h3>
+
+            <pre id="status">
+
+Ready
+
+            </pre>
+
+        </aside>
+
+    </div>
+
+</div>
+
+<script src="/static/js/game.js"></script>
 
 </body>
 

@@ -1,0 +1,383 @@
+/* ==========================================================
+   TikTrivia Pro
+   Professional Host Dashboard
+   ========================================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html,body{
+
+    width:100%;
+    height:100%;
+
+    overflow:hidden;
+
+    background:#151515;
+
+    color:white;
+
+    font-family:"Segoe UI",Arial,sans-serif;
+
+}
+
+#root{
+
+    width:100%;
+    height:100%;
+
+}
+
+.dashboard{
+
+    display:flex;
+
+    flex-direction:column;
+
+    height:100vh;
+
+}
+
+/* -------------------------------------------------- */
+/* TOP BAR                                            */
+/* -------------------------------------------------- */
+
+.topbar{
+
+    height:80px;
+
+    background:#232323;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:18px 25px;
+
+    border-bottom:2px solid #3b3b3b;
+
+}
+
+.topbar h1{
+
+    font-size:34px;
+
+    margin-bottom:4px;
+
+}
+
+.topbar p{
+
+    color:#9d9d9d;
+
+    font-size:15px;
+
+}
+
+.live{
+
+    font-size:22px;
+
+    font-weight:bold;
+
+    color:#5CFF73;
+
+}
+
+/* -------------------------------------------------- */
+/* MAIN GRID                                          */
+/* -------------------------------------------------- */
+
+.main-grid{
+
+    flex:1;
+
+    display:grid;
+
+    grid-template-columns:260px 1fr 320px;
+
+    gap:18px;
+
+    padding:18px;
+
+}
+
+/* -------------------------------------------------- */
+/* PANELS                                             */
+/* -------------------------------------------------- */
+
+.left-panel,
+.center-panel,
+.right-panel{
+
+    background:#252525;
+
+    border-radius:12px;
+
+    padding:18px;
+
+    box-shadow:0 0 15px rgba(0,0,0,.35);
+
+    overflow:auto;
+
+}
+
+.left-panel h2,
+.right-panel h2{
+
+    margin-bottom:18px;
+
+}
+
+/* -------------------------------------------------- */
+/* CONTESTANTS                                        */
+/* -------------------------------------------------- */
+
+.contestant-mode{
+
+    background:#313131;
+
+    padding:12px;
+
+    border-radius:8px;
+
+    margin-bottom:18px;
+
+    line-height:1.5;
+
+}
+
+.contestant-row{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    padding:10px 0;
+
+    border-bottom:1px solid #3c3c3c;
+
+}
+
+.placeholder{
+
+    color:#999;
+
+    margin-top:15px;
+
+}
+
+/* -------------------------------------------------- */
+/* BOARD                                              */
+/* -------------------------------------------------- */
+
+.board-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    margin-bottom:20px;
+
+    font-size:18px;
+
+}
+
+.question{
+
+    font-size:28px;
+
+    font-weight:700;
+
+    line-height:1.35;
+
+    text-align:center;
+
+    margin:10px auto 25px auto;
+
+    max-width:900px;
+
+    min-height:85px;
+
+}
+
+/* -------------------------------------------------- */
+/* ANSWERS                                            */
+/* -------------------------------------------------- */
+
+.answer{
+
+    display:grid;
+
+    grid-template-columns:55px 1fr 70px;
+
+    align-items:center;
+
+    gap:10px;
+
+    background:#303030;
+
+    border-radius:8px;
+
+    padding:15px;
+
+    margin-bottom:10px;
+
+    font-size:24px;
+
+}
+
+.rank{
+
+    font-weight:bold;
+
+    text-align:center;
+
+}
+
+.answer-text{
+
+    letter-spacing:2px;
+
+    overflow:hidden;
+
+    white-space:nowrap;
+
+}
+
+/* -------------------------------------------------- */
+/* STATUS BAR                                         */
+/* -------------------------------------------------- */
+
+.status-bar{
+
+    display:grid;
+
+    grid-template-columns:repeat(3,1fr);
+
+    margin-top:25px;
+
+    background:#313131;
+
+    border-radius:10px;
+
+    padding:15px;
+
+    text-align:center;
+
+}
+
+.status-bar b{
+
+    font-size:24px;
+
+}
+
+/* -------------------------------------------------- */
+/* HOST COMMAND CENTER                                */
+/* -------------------------------------------------- */
+
+.right-panel button{
+
+    width:100%;
+
+    margin-bottom:12px;
+
+    padding:13px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#3b3b3b;
+
+    color:white;
+
+    font-size:16px;
+
+    transition:.2s;
+
+}
+
+.right-panel button:hover{
+
+    background:#4f4f4f;
+
+}
+
+/* -------------------------------------------------- */
+/* EVENT LOG                                          */
+/* -------------------------------------------------- */
+
+.event-log{
+
+    margin-top:15px;
+
+    height:260px;
+
+    overflow-y:auto;
+
+    background:#1d1d1d;
+
+    border-radius:8px;
+
+    padding:10px;
+
+}
+
+.event-log div{
+
+    padding:6px 0;
+
+    border-bottom:1px solid #333;
+
+    font-size:14px;
+
+}
+
+/* -------------------------------------------------- */
+/* SCROLLBAR                                          */
+/* -------------------------------------------------- */
+
+::-webkit-scrollbar{
+
+    width:10px;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#555;
+
+    border-radius:6px;
+
+}
+
+/* -------------------------------------------------- */
+/* RESPONSIVE                                         */
+/* -------------------------------------------------- */
+
+@media (max-width:1400px){
+
+    .main-grid{
+
+        grid-template-columns:220px 1fr 280px;
+
+    }
+
+}
+
+@media (max-width:1100px){
+
+    .main-grid{
+
+        grid-template-columns:1fr;
+
+    }
+
+}

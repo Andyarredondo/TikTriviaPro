@@ -1,0 +1,48 @@
+
+.rrn-frame{
+    position:relative;
+    width:100%;
+    height:100%;
+}
+
+.rrn-inner{
+    position:relative;
+    z-index:2;
+}
+
+.rrn-corner{
+    position:absolute;
+    width:42px;
+    height:42px;
+    border:3px solid var(--rrn-gold);
+    z-index:1;
+    opacity:.8;
+}
+
+.rrn-corner.tl{
+    top:8px;
+    left:8px;
+    border-right:none;
+    border-bottom:none;
+}
+
+.rrn-corner.tr{
+    top:8px;
+    right:8px;
+    border-left:none;
+    border-bottom:none;
+}
+
+.rrn-corner.bl{
+    bottom:8px;
+    left:8px;
+    border-right:none;
+    border-top:none;
+}
+
+.rrn-corner.br{
+    bottom:8px;
+    right:8px;
+    border-left:none;
+    border-top:none;
+}

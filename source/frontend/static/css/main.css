@@ -1,133 +1,197 @@
-* {
+/*
+==========================================================
+TikTrivia Pro
+Host Control Panel
+Version 0.2.0
+==========================================================
+*/
 
-    margin:0;
+const contestantPanel =
+    document.getElementById("contestantList");
 
-    padding:0;
+const leaderboardPanel =
+    document.getElementById("leaderboard");
 
-    box-sizing:border-box;
+const questionPanel =
+    document.getElementById("currentQuestion");
+
+let contestants = [];
+
+/* -------------------------------------------------- */
+
+async function loadContestants(){
+
+    try{
+
+        const response =
+            await fetch("/api/contestants/");
+
+        contestants =
+            await response.json();
+
+        renderContestants();
+
+        renderLeaderboard();
+
+    }
+
+    catch(error){
+
+        console.error(error);
+
+    }
 
 }
 
-body{
+/* -------------------------------------------------- */
 
-    background:#111827;
+function renderContestants(){
 
-    color:white;
+    if(contestants.length===0){
 
-    font-family:Segoe UI,Arial,sans-serif;
+        contestantPanel.innerHTML =
+            "<p>No contestants.</p>";
+
+        return;
+
+    }
+
+    let html="";
+
+    contestants.forEach(player=>{
+
+        html+=`
+
+        <div class="player">
+
+            <div>
+
+                <strong>${player.display_name}</strong>
+
+                <br>
+
+                <small>@${player.username}</small>
+
+            </div>
+
+            <div class="score">
+
+                ${player.score}
+
+            </div>
+
+        </div>
+
+        `;
+
+    });
+
+    contestantPanel.innerHTML=html;
 
 }
 
-.container{
+/* -------------------------------------------------- */
 
-    width:100%;
+function renderLeaderboard(){
 
-    min-height:100vh;
+    if(contestants.length===0){
+
+        leaderboardPanel.innerHTML=
+            "<p>No scores.</p>";
+
+        return;
+
+    }
+
+    const sorted=[...contestants];
+
+    sorted.sort(
+
+        (a,b)=>b.score-a.score
+
+    );
+
+    let html="";
+
+    sorted.forEach((player,index)=>{
+
+        html+=`
+
+        <div class="leader">
+
+            <span>
+
+                ${index+1}. ${player.display_name}
+
+            </span>
+
+            <strong>
+
+                ${player.score}
+
+            </strong>
+
+        </div>
+
+        `;
+
+    });
+
+    leaderboardPanel.innerHTML=html;
+
+}
+
+/* -------------------------------------------------- */
+
+questionPanel.innerHTML=
+
+`Waiting for game...`;
+
+/* -------------------------------------------------- */
+
+loadContestants();
+
+setInterval(
+
+    loadContestants,
+
+    3000
+
+);
+
+
+.player{
 
     display:flex;
 
-    justify-content:center;
+    justify-content:space-between;
 
     align-items:center;
 
-    padding:40px;
+    padding:12px;
+
+    border-bottom:1px solid #2D3748;
 
 }
 
-.card{
+.score{
 
-    width:900px;
+    font-size:20px;
 
-    background:#1F2937;
+    font-weight:bold;
 
-    border-radius:18px;
-
-    padding:40px;
-
-    box-shadow:0 0 35px rgba(0,0,0,.35);
+    color:#22C55E;
 
 }
 
-.status{
+.leader{
 
     display:flex;
 
-    align-items:center;
+    justify-content:space-between;
 
-    gap:10px;
+    padding:10px;
 
-    margin-bottom:20px;
-
-}
-
-.dot{
-
-    width:12px;
-
-    height:12px;
-
-    background:#2ecc71;
-
-    border-radius:50%;
-
-}
-
-h1{
-
-    font-size:48px;
-
-    margin-bottom:10px;
-
-}
-
-h2{
-
-    font-weight:400;
-
-    color:#cccccc;
-
-    margin-bottom:30px;
-
-}
-
-.version{
-
-    color:#9CA3AF;
-
-    margin-bottom:30px;
-
-}
-
-hr{
-
-    margin-bottom:30px;
-
-    border:1px solid #374151;
-
-}
-
-.grid{
-
-    display:grid;
-
-    grid-template-columns:repeat(2,1fr);
-
-    gap:20px;
-
-}
-
-.panel{
-
-    background:#374151;
-
-    border-radius:12px;
-
-    padding:20px;
-
-}
-
-.panel h3{
-
-    margin-bottom:10px;
+    border-bottom:1px solid #2D3748;
 
 }

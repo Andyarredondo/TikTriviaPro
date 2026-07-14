@@ -1,0 +1,148 @@
+/* ===========================================================
+   Andy the Renaissance Man Broadcast Theme v2
+   =========================================================== */
+
+:root{
+    --rrn-bg:#0f0f10;
+    --rrn-panel:#1b1917;
+    --rrn-panel2:#26211b;
+
+    --rrn-gold:#d4af37;
+    --rrn-gold-dark:#8e6b22;
+    --rrn-bronze:#6e4a25;
+    --rrn-ivory:#f4ead0;
+    --rrn-purple:#7b56d8;
+    --rrn-live:#26d36b;
+}
+
+html,body,#root{
+    width:100%;
+    height:100%;
+    margin:0;
+}
+
+body{
+    background:
+      radial-gradient(circle at top,
+      rgba(123,86,216,.12),
+      transparent 40%),
+      linear-gradient(180deg,#181818,#0f0f10);
+    color:var(--rrn-ivory);
+    font-family:"Segoe UI",Arial,sans-serif;
+    overflow:hidden;
+}
+
+.broadcast-layout{
+    width:100vw;
+    height:100vh;
+    padding:28px;
+    box-sizing:border-box;
+}
+
+.broadcast-frame{
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    border:4px solid var(--rrn-gold);
+    border-radius:22px;
+    background:
+      linear-gradient(180deg,var(--rrn-panel2),var(--rrn-panel));
+    box-shadow:
+      0 0 40px rgba(0,0,0,.55),
+      0 0 18px rgba(212,175,55,.18),
+      inset 0 0 0 2px rgba(255,255,255,.03);
+    position:relative;
+    overflow:hidden;
+}
+
+.broadcast-frame::before,
+.broadcast-frame::after{
+    content:"";
+    position:absolute;
+    width:180px;
+    height:180px;
+    border:2px solid rgba(212,175,55,.35);
+    border-radius:50%;
+    pointer-events:none;
+}
+
+.broadcast-frame::before{
+    top:-90px;
+    left:-90px;
+}
+
+.broadcast-frame::after{
+    bottom:-90px;
+    right:-90px;
+}
+
+.broadcast-title{
+    margin:0;
+    color:var(--rrn-gold);
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:2.4rem;
+    letter-spacing:3px;
+    text-shadow:
+      0 0 10px rgba(212,175,55,.35);
+}
+
+.broadcast-subtitle{
+    margin-top:6px;
+    color:var(--rrn-ivory);
+    font-size:1.35rem;
+    letter-spacing:1px;
+}
+
+.question-scroll{
+    background:
+      linear-gradient(
+      180deg,
+      rgba(243,231,196,.12),
+      rgba(243,231,196,.06));
+    border:2px solid var(--rrn-gold);
+    border-radius:18px;
+    padding:26px;
+    box-shadow:
+      inset 0 0 25px rgba(255,255,255,.02),
+      0 0 12px rgba(212,175,55,.18);
+}
+
+.answer-plaque{
+    background:
+      linear-gradient(180deg,#222,#171717);
+    border:2px solid var(--rrn-bronze);
+    border-radius:14px;
+}
+
+.answer-plaque.revealed{
+    border-color:var(--rrn-gold);
+    box-shadow:
+      0 0 14px rgba(212,175,55,.30),
+      0 0 8px rgba(123,86,216,.20);
+}
+
+.live-indicator{
+    color:var(--rrn-live);
+    font-weight:700;
+}
+
+.timer{
+    color:var(--rrn-gold);
+    font-weight:700;
+}
+
+.broadcast-status{
+    border-top:2px solid rgba(212,175,55,.25);
+}
+
+.found-counter{
+    color:var(--rrn-gold);
+    font-weight:700;
+}
+
+@media(max-width:900px){
+    .broadcast-layout{padding:12px;}
+    .broadcast-title{font-size:1.7rem;}
+    .broadcast-subtitle{font-size:1rem;}
+}
