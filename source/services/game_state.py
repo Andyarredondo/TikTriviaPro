@@ -63,9 +63,50 @@ class GameState:
         self.correct_players: dict[int, str] = {}
         self.start_time: datetime | None = None
         self.end_time: datetime | None = None
+        self.board_source: str = "Entire Database"
+        self.random_deck_ids: list[str] = []
+        self.random_deck_position: int = 0
+        self.random_deck_last_played: list[str] = []
+        self.random_deck_auto_reshuffle: bool = False
+        self.selected_category: str | None = None
+        self.viewer_overlay_state: str = "BOARD"
 
         self.event_log.clear()
         self.add_event("Game reset.")
+
+    # -----------------------------------------------------
+    # Random Deck
+    # -----------------------------------------------------
+
+    def record_random_deck_played(self, board_id: str | None) -> None:
+        """
+        Track the most recently played board IDs for the random deck.
+        """
+
+        if not board_id:
+            return
+
+        self.random_deck_last_played = [
+            board_id,
+            *[entry for entry in self.random_deck_last_played if entry != board_id],
+        ][:10]
+
+    def random_deck_status(self) -> dict:
+        """
+        Return the current random deck status.
+        """
+
+        total_boards = len(self.random_deck_ids)
+        boards_played = self.random_deck_position
+        boards_remaining = max(total_boards - boards_played, 0)
+
+        return {
+            "total_boards": total_boards,
+            "boards_remaining": boards_remaining,
+            "boards_played": boards_played,
+            "last_10_boards": list(self.random_deck_last_played),
+            "auto_reshuffle": self.random_deck_auto_reshuffle,
+        }
 
     # -----------------------------------------------------
     # Load Board
@@ -84,6 +125,11 @@ class GameState:
         self.correct_players = {}
         self.start_time = None
         self.end_time = None
+        self.viewer_overlay_state = "STANDBY"
+
+        if board is not None:
+            for answer in board.answers:
+                answer.revealed = False
 
         self.add_event(
             f"Board loaded: {getattr(board, 'board_id', 'Unknown')}"
@@ -102,6 +148,13 @@ class GameState:
         self.question_open = True
         self.start_time = datetime.now()
         self.end_time = None
+        self.viewer_overlay_state = "BOARD"
+
+        if self.board is not None:
+            for answer in self.board.answers:
+                answer.revealed = False
+
+        self.answers_found.clear()
 
         self.add_event("Round opened.")
 
@@ -117,6 +170,7 @@ class GameState:
         self.running = False
         self.question_open = False
         self.end_time = datetime.now()
+        self.viewer_overlay_state = "STANDBY"
 
         self.add_event("Round closed.")
 
@@ -260,6 +314,7 @@ class GameState:
             "remaining_answers": self.remaining_answers(),
             "timer_seconds": self.timer_seconds,
             "event_log": list(self.event_log),
+            "viewer_overlay_state": self.viewer_overlay_state,
         }
 
 

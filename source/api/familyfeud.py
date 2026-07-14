@@ -15,8 +15,11 @@ from source.api.api_response import failure
 
 from source.services.familyfeud_game_service import (
     current_board,
+    create_random_deck,
     first_board,
+    get_categories,
     next_board,
+    next_random_board,
     previous_board,
 )
 
@@ -86,8 +89,6 @@ def api_first_board():
 
         )
 
-    GAME.load_board(board)
-
     return success(
 
         data=board_to_dict(GAME.board),
@@ -143,6 +144,66 @@ def api_next_board():
         data=board_to_dict(GAME.board),
 
         message="Next board loaded.",
+
+    )
+
+
+@router.post("/random-deck/new")
+def api_new_random_deck():
+
+    deck_ids = create_random_deck()
+
+    if not deck_ids:
+
+        return failure(
+
+            message="No boards found.",
+
+            status_code=404,
+
+        )
+
+    return success(
+
+        data=GAME.random_deck_status(),
+
+        message="Random deck created.",
+
+    )
+
+
+@router.post("/random-deck/next")
+def api_next_random_board():
+
+    board = next_random_board()
+
+    if board is None:
+
+        return failure(
+
+            message="Random deck complete. Start a new deck to continue.",
+
+            status_code=404,
+
+        )
+
+    return success(
+
+        data=board_to_dict(GAME.board),
+
+        message="Next random board loaded.",
+
+    )
+
+
+@router.get("/random-deck/status")
+def random_deck_status():
+
+    return success(
+
+        data=GAME.random_deck_status(),
+
+        message="Random deck status.",
 
     )
 # ---------------------------------------------------------
@@ -362,5 +423,105 @@ def current():
         data=board_to_dict(GAME.board),
 
         message="Current board.",
+
+    )
+
+
+@router.get("/board-source")
+def get_board_source():
+
+    return success(
+
+        data={
+            "board_source": GAME.board_source,
+            "selected_category": GAME.selected_category,
+        },
+
+        message="Current board source.",
+
+    )
+
+
+@router.post("/board-source/{source}")
+def set_board_source(source: str):
+
+    supported_sources = {
+        "Entire Database",
+        "Category",
+        "Saved Show",
+        "Playlist",
+        "Favorites",
+    }
+
+    if source not in supported_sources:
+
+        return failure(
+
+            message="Invalid board source.",
+
+            status_code=400,
+
+        )
+
+    GAME.board_source = source
+
+    if source != "Category":
+        GAME.selected_category = None
+
+    create_random_deck()
+
+    return success(
+
+        data={
+            "board_source": GAME.board_source,
+            "selected_category": GAME.selected_category,
+            "board": board_to_dict(GAME.board),
+            "deck_status": GAME.random_deck_status(),
+        },
+
+        message="Board source updated.",
+
+    )
+
+
+@router.post("/board-source/category/{category}")
+def set_category_source(category: str):
+
+    if not category:
+
+        return failure(
+
+            message="Category is required.",
+
+            status_code=400,
+
+        )
+
+    GAME.board_source = "Category"
+    GAME.selected_category = category
+
+    create_random_deck()
+
+    return success(
+
+        data={
+            "board_source": GAME.board_source,
+            "selected_category": GAME.selected_category,
+            "board": board_to_dict(GAME.board),
+            "deck_status": GAME.random_deck_status(),
+        },
+
+        message="Category selected.",
+
+    )
+
+@router.get("/categories")
+def categories():
+
+    return success(
+
+        data={"categories": get_categories()},
+
+        message="Categories loaded.",
 
     )

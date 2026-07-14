@@ -32,11 +32,14 @@ body{
     overflow:hidden;
 }
 
+/* The broadcast-layout fills whatever container the ViewerOverlay gives it.
+   ViewerOverlay provides a 9:16 portrait box, so we fill it completely. */
 .broadcast-layout{
-    width:100vw;
-    height:100vh;
-    padding:28px;
+    width:100%;
+    height:100%;
+    padding:5% 3%;
     box-sizing:border-box;
+    container-type:inline-size;
 }
 
 .broadcast-frame{
@@ -54,6 +57,7 @@ body{
       inset 0 0 0 2px rgba(255,255,255,.03);
     position:relative;
     overflow:hidden;
+    container-type:inline-size;
 }
 
 .broadcast-frame::before,
@@ -101,18 +105,51 @@ body{
       rgba(243,231,196,.12),
       rgba(243,231,196,.06));
     border:2px solid var(--rrn-gold);
-    border-radius:18px;
-    padding:26px;
+    border-radius:clamp(8px,2cqw,18px);
+    padding:clamp(10px,3%,26px);
     box-shadow:
       inset 0 0 25px rgba(255,255,255,.02),
       0 0 12px rgba(212,175,55,.18);
+    flex-shrink:0;
+}
+
+.question-text{
+    font-size:clamp(0.9rem,4cqw,1.75rem);
+    line-height:1.35;
+    color:var(--rrn-ivory);
 }
 
 .answer-plaque{
     background:
       linear-gradient(180deg,#222,#171717);
     border:2px solid var(--rrn-bronze);
-    border-radius:14px;
+    border-radius:clamp(6px,1.5cqw,14px);
+    display:grid;
+    grid-template-columns:clamp(32px,8cqw,56px) 1fr clamp(36px,9cqw,64px);
+    align-items:center;
+    padding:clamp(6px,1.5%,14px) clamp(8px,2%,18px);
+    gap:clamp(4px,1cqw,10px);
+}
+
+.answer-rank{
+    font-size:clamp(0.85rem,3.5cqw,1.5rem);
+    font-weight:700;
+    color:var(--rrn-gold);
+    text-align:center;
+}
+
+.answer-text{
+    font-size:clamp(0.75rem,3cqw,1.3rem);
+    letter-spacing:clamp(0.5px,0.3cqw,2px);
+    color:var(--rrn-ivory);
+    word-break:break-word;
+}
+
+.answer-score{
+    font-size:clamp(0.75rem,3cqw,1.3rem);
+    font-weight:700;
+    color:var(--rrn-gold);
+    text-align:right;
 }
 
 .answer-plaque.revealed{
@@ -134,6 +171,11 @@ body{
 
 .broadcast-status{
     border-top:2px solid rgba(212,175,55,.25);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:clamp(4px,1.5%,12px) clamp(8px,3%,24px);
+    flex-shrink:0;
 }
 
 .found-counter{
@@ -142,7 +184,5 @@ body{
 }
 
 @media(max-width:900px){
-    .broadcast-layout{padding:12px;}
-    .broadcast-title{font-size:1.7rem;}
-    .broadcast-subtitle{font-size:1rem;}
+    .broadcast-layout{padding:3% 2%;}
 }

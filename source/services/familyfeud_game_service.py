@@ -13,6 +13,8 @@ the database session closes.
 
 from __future__ import annotations
 
+import random
+
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -129,6 +131,131 @@ def _get_all_boards() -> list[FamilyFeudBoard]:
 
     finally:
         close_session(session)
+
+
+def _get_boards_for_category(category: str) -> list[FamilyFeudBoard]:
+    """
+    Load boards for a single category with their answers.
+    """
+
+    session = get_session()
+
+    try:
+        statement = (
+            _board_query()
+            .where(FamilyFeudBoard.category == category)
+            .order_by(FamilyFeudBoard.board_id)
+        )
+
+        boards = list(
+            session.scalars(statement).all()
+        )
+
+        for board in boards:
+            board.answers.sort(
+                key=lambda answer: answer.rank
+            )
+
+        return boards
+
+    finally:
+        close_session(session)
+
+
+def get_categories() -> list[str]:
+    """
+    Return all unique board categories, sorted alphabetically.
+    """
+
+    session = get_session()
+
+    try:
+        statement = select(FamilyFeudBoard.category).distinct()
+        categories = list(session.scalars(statement).all())
+        return sorted(
+            category for category in categories if category
+        )
+
+    finally:
+        close_session(session)
+
+
+def _get_boards_for_current_source() -> list[FamilyFeudBoard]:
+    """
+    Return boards for the currently selected source.
+    """
+
+    if GAME.board_source == "Category":
+        return _get_boards_for_category(GAME.selected_category or "")
+
+    return _get_all_boards()
+
+
+def create_random_deck() -> list[str]:
+    """
+    Create a new shuffled deck containing every board exactly once.
+    """
+
+    boards = _get_boards_for_current_source()
+
+    if not boards:
+        GAME.random_deck_ids = []
+        GAME.random_deck_position = 0
+        GAME.random_deck_last_played = []
+        return []
+
+    shuffled_board_ids = [board.board_id for board in boards]
+
+    for index in range(len(shuffled_board_ids) - 1, 0, -1):
+        swap_index = random.randrange(index + 1)
+        shuffled_board_ids[index], shuffled_board_ids[swap_index] = (
+            shuffled_board_ids[swap_index],
+            shuffled_board_ids[index],
+        )
+
+    GAME.random_deck_ids = shuffled_board_ids
+    GAME.random_deck_position = 0
+    GAME.random_deck_last_played = []
+
+    first_board_id = shuffled_board_ids[0] if shuffled_board_ids else None
+
+    if first_board_id:
+        board_lookup = {board.board_id: board for board in boards}
+        first_board = board_lookup.get(first_board_id)
+
+        if first_board is not None:
+            _activate_board(first_board)
+
+    return shuffled_board_ids
+
+
+def next_random_board() -> FamilyFeudBoard | None:
+    """
+    Load the next board from the shuffled random deck.
+    """
+
+    boards = _get_boards_for_current_source()
+
+    if not boards:
+        return None
+
+    if not GAME.random_deck_ids or GAME.random_deck_position >= len(GAME.random_deck_ids):
+        return None
+
+    board_id = GAME.random_deck_ids[GAME.random_deck_position]
+    GAME.random_deck_position += 1
+
+    board = next(
+        (board for board in boards if board.board_id == board_id),
+        None,
+    )
+
+    if board is None:
+        return None
+
+    GAME.record_random_deck_played(board.board_id)
+
+    return _activate_board(board)
 
 
 def first_board() -> FamilyFeudBoard | None:

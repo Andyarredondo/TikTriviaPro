@@ -17,7 +17,13 @@ export default function StatusBar({
     }, [status]);
 
     return (
-        <div className="broadcast-status">
+        <div
+            className="broadcast-status"
+            style={{
+                fontSize: "clamp(0.65rem, 2.2cqw, 1rem)",
+                flexShrink: 0,
+            }}
+        >
             <div className="live-indicator">
                 {status?.question_open ? "● LIVE" : "● CLOSED"}
             </div>

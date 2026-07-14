@@ -29,9 +29,10 @@ export default function BroadcastLayout({
                             flex: 1,
                             display: "flex",
                             flexDirection: "column",
-                            padding: "24px",
-                            gap: "20px",
+                            padding: "3% 3% 2%",
+                            gap: "2%",
                             overflow: "hidden",
+                            minHeight: 0,
                         }}
                     >
                         {children}

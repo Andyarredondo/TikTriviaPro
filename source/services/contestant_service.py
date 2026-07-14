@@ -24,6 +24,8 @@ from source.repositories.contestant_repository import (
     get_active_contestants,
     get_all_contestants,
     get_contestant_by_id,
+    reset_contestant_score as repo_reset_contestant_score,
+    set_contestant_active as repo_set_contestant_active,
     update_contestant,
 )
 
@@ -145,6 +147,50 @@ def remove_contestant(
         return delete_contestant(
             session=session,
             contestant_id=contestant_id,
+        )
+
+    finally:
+
+        close_session(session)
+
+
+def reset_contestant_score(
+    contestant_id: int,
+):
+    """
+    Reset the score for a contestant.
+    """
+
+    session = get_session()
+
+    try:
+
+        return repo_reset_contestant_score(
+            session=session,
+            contestant_id=contestant_id,
+        )
+
+    finally:
+
+        close_session(session)
+
+
+def set_contestant_active(
+    contestant_id: int,
+    active: bool,
+):
+    """
+    Set a contestant's active state.
+    """
+
+    session = get_session()
+
+    try:
+
+        return repo_set_contestant_active(
+            session=session,
+            contestant_id=contestant_id,
+            active=active,
         )
 
     finally:

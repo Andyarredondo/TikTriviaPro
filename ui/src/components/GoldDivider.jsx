@@ -10,7 +10,7 @@ export default function GoldDivider({
                 display: "flex",
                 alignItems: "center",
                 gap: "16px",
-                margin: "18px 0",
+                margin: "clamp(3px, 1.2%, 10px) 0",
             }}
         >
             <div

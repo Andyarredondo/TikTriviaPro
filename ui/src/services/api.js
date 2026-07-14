@@ -38,23 +38,41 @@ async function request(url, options = {}) {
 
 export const api = {
 
-contestants: {
+    contestants: {
 
-    async list() {
+        async list() {
 
-        const response = await fetch("/api/contestants/");
+            const response = await fetch("/api/contestants/");
 
-        if (!response.ok) {
+            if (!response.ok) {
 
-            throw new Error("Unable to load contestants.");
+                throw new Error("Unable to load contestants.");
 
-        }
+            }
 
-        return await response.json();
+            return await response.json();
 
+        },
+
+        async resetScore(contestantId) {
+            return request(`/api/contestants/${contestantId}/reset_score`, {
+                method: "POST",
+            });
+        },
+
+        async setActive(contestantId, active) {
+            return request(`/api/contestants/${contestantId}/active?active=${active}`, {
+                method: "POST",
+            });
+        },
+
+        async remove(contestantId) {
+            return request(`/api/contestants/${contestantId}`, {
+                method: "DELETE",
+            });
+        },
     },
 
-},
     familyFeud: {
 
         current() {
@@ -96,6 +114,32 @@ contestants: {
                 method: "POST",
 
             });
+
+        },
+
+        randomDeckNew() {
+
+            return request("/api/family-feud/random-deck/new", {
+
+                method: "POST",
+
+            });
+
+        },
+
+        randomDeckNext() {
+
+            return request("/api/family-feud/random-deck/next", {
+
+                method: "POST",
+
+            });
+
+        },
+
+        randomDeckStatus() {
+
+            return request("/api/family-feud/random-deck/status");
 
         },
 
@@ -152,6 +196,38 @@ contestants: {
         setRegistrationMode(mode) {
 
             return request(`/api/family-feud/registration_mode/${mode}`, {
+
+                method: "POST",
+
+            });
+
+        },
+
+        getBoardSource() {
+
+            return request("/api/family-feud/board-source");
+
+        },
+
+        getCategories() {
+
+            return request("/api/family-feud/categories");
+
+        },
+
+        setBoardSource(source) {
+
+            return request(`/api/family-feud/board-source/${source}`, {
+
+                method: "POST",
+
+            });
+
+        },
+
+        setCategorySource(category) {
+
+            return request(`/api/family-feud/board-source/category/${encodeURIComponent(category)}`, {
 
                 method: "POST",
 

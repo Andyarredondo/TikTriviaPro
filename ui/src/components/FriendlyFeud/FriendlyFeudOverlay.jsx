@@ -1,10 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 import AnswerPlaque from "../AnswerPlaque";
-import BroadcastLayout from "../BroadcastLayout";
-import CategoryRibbon from "../CategoryRibbon";
-import EmptyBoard from "../EmptyBoard";
-import QuestionScroll from "../QuestionScroll";
 
 import "../../theme/overlay.css";
 
@@ -21,50 +17,58 @@ export default function FriendlyFeudOverlay({
         board?.survey_question
     );
 
+    const timer = useMemo(() => {
+        const seconds = status?.timer_seconds ?? 0;
+        const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+        const s = String(seconds % 60).padStart(2, "0");
+        return `${m}:${s}`;
+    }, [status?.timer_seconds]);
+
+    const foundCount = status?.answers_found?.length ?? 0;
+    const totalCount = foundCount + (status?.remaining_answers ?? 0);
+
     return (
-        <BroadcastLayout
-            title="Andy the Renaissance Man"
-            subtitle=""
-            status={status}
-        >
-            <div className="overlay-board">
-                {!hasBoard ? (
-                    <EmptyBoard />
-                ) : (
-                    <>
-                        <CategoryRibbon
-                            category={board.category}
-                        />
+        <div className="ff-overlay">
 
-                        <QuestionScroll
-                            category=""
-                            question={board.survey_question}
-                        />
+            {hasBoard ? (
+                <>
+                    <div className="ff-category">
+                        {board.category || ""}
+                    </div>
 
-                        <section
-                            className="overlay-answer-list"
-                            aria-label="Friendly Feud answers"
-                        >
-                            {answers.map((answer) => (
-                                <AnswerPlaque
-                                    key={answer.id}
-                                    rank={answer.rank}
-                                    answer={answer.answer}
-                                    points={answer.points}
-                                    revealed={answer.revealed}
-                                />
-                            ))}
-                        </section>
+                    <div className="ff-question">
+                        {board.survey_question}
+                    </div>
 
-                        <div
-                            className="overlay-board-code"
-                            aria-label="Board ID"
-                        >
-                            Board {board.board_id}
-                        </div>
-                    </>
-                )}
-            </div>
-        </BroadcastLayout>
+                    <div
+                        className="ff-answers"
+                        aria-label="Friendly Feud answers"
+                    >
+                        {answers.map((answer) => (
+                            <AnswerPlaque
+                                key={answer.id}
+                                rank={answer.rank}
+                                answer={answer.answer}
+                                points={answer.points}
+                                revealed={answer.revealed}
+                            />
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div className="ff-empty">
+                    Waiting for next board…
+                </div>
+            )}
+
+            {status?.question_open && (
+                <div className="ff-status-bar">
+                    <span className="live-indicator">🟢 LIVE</span>
+                    <span className="ff-timer">⏱ {timer}</span>
+                    <span className="ff-found">✓ {foundCount}/{totalCount}</span>
+                </div>
+            )}
+
+        </div>
     );
 }

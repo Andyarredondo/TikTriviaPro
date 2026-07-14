@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import { api } from "../../services/api";
 import FriendlyFeudOverlay from "../../components/FriendlyFeud/FriendlyFeudOverlay";
+import StandbyOverlay from "../../components/FriendlyFeud/StandbyOverlay";
 
 import "../../theme/theme.css";
 import "../../theme/overlay.css";
@@ -38,14 +39,33 @@ export default function ViewerOverlay() {
             style={{
                 width: "100vw",
                 height: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "transparent",
                 overflow: "hidden",
-                background: "#111"
             }}
         >
-            <FriendlyFeudOverlay
-                board={board}
-                status={status}
-            />
+            {/* 1:1 square canvas — centered, never distorts */}
+            <div
+                style={{
+                    aspectRatio: "1 / 1",
+                    height: "min(100vh, 100vw)",
+                    width: "min(100vw, 100vh)",
+                    position: "relative",
+                    overflow: "hidden",
+                    flexShrink: 0,
+                }}
+            >
+                {status?.viewer_overlay_state === "STANDBY" ? (
+                    <StandbyOverlay />
+                ) : (
+                    <FriendlyFeudOverlay
+                        board={board}
+                        status={status}
+                    />
+                )}
+            </div>
         </div>
     );
 }

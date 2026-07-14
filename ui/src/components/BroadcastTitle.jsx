@@ -1,4 +1,5 @@
 import React from "react";
+import logo from "../assets/logos/tiktriviapro-logo.svg";
 import "../theme/theme.css";
 
 export default function BroadcastTitle({
@@ -9,31 +10,30 @@ export default function BroadcastTitle({
         <section
             style={{
                 textAlign: "center",
-                padding: "14px 24px 22px",
+                padding: "2.5% 4% 1.5%",
                 borderBottom: "2px solid var(--rrn-gold-dark)",
-                marginBottom: "18px",
+                flexShrink: 0,
             }}
         >
-            <div
+            <img
+                src={logo}
+                alt={show}
                 style={{
-                    color: "var(--rrn-gold)",
-                    fontFamily: 'Georgia,"Times New Roman",serif',
-                    fontSize: "2.2rem",
-                    fontWeight: 700,
-                    letterSpacing: "4px",
-                    textTransform: "uppercase",
-                    textShadow: "0 0 10px rgba(212,175,55,.35)"
+                    height: "clamp(36px, 8cqw, 64px)",
+                    width: "auto",
+                    display: "block",
+                    margin: "0 auto",
+                    objectFit: "contain",
+                    filter: "drop-shadow(0 0 8px rgba(212,175,55,.4))",
                 }}
-            >
-                {show}
-            </div>
+            />
 
             {game && (
                 <div
                     style={{
-                        marginTop: "8px",
+                        marginTop: "6px",
                         color: "var(--rrn-ivory)",
-                        fontSize: "1.25rem",
+                        fontSize: "clamp(0.75rem, 2.5cqw, 1.25rem)",
                         letterSpacing: "2px",
                     }}
                 >

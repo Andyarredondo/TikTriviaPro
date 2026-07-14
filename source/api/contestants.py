@@ -27,6 +27,8 @@ from source.services.contestant_service import (
     list_active_contestants,
     list_contestants,
     remove_contestant,
+    reset_contestant_score as service_reset_contestant_score,
+    set_contestant_active as service_set_contestant_active,
 )
 
 router = APIRouter(
@@ -238,6 +240,80 @@ async def update_contestant(
 
         }
 
+    }
+
+
+# ----------------------------------------------------------
+# RESET SCORE
+# ----------------------------------------------------------
+
+@router.post("/{contestant_id}/reset_score")
+async def reset_contestant_score(
+    contestant_id: int,
+):
+
+    contestant = find_contestant(
+        contestant_id
+    )
+
+    if contestant is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Contestant not found.",
+        )
+
+    contestant = service_reset_contestant_score(
+        contestant_id=contestant_id,
+    )
+
+    return {
+        "success": True,
+        "contestant": {
+            "id": contestant.id,
+            "username": contestant.username,
+            "display_name": contestant.display_name,
+            "active": contestant.active,
+            "score": contestant.score,
+        },
+    }
+
+
+# ----------------------------------------------------------
+# SET ACTIVE
+# ----------------------------------------------------------
+
+@router.post("/{contestant_id}/active")
+async def set_contestant_active(
+    contestant_id: int,
+    active: bool,
+):
+
+    contestant = find_contestant(
+        contestant_id
+    )
+
+    if contestant is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Contestant not found.",
+        )
+
+    contestant = service_set_contestant_active(
+        contestant_id=contestant_id,
+        active=active,
+    )
+
+    return {
+        "success": True,
+        "contestant": {
+            "id": contestant.id,
+            "username": contestant.username,
+            "display_name": contestant.display_name,
+            "active": contestant.active,
+            "score": contestant.score,
+        },
     }
 
 

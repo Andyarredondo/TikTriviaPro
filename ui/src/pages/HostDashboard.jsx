@@ -7,13 +7,21 @@ export default function HostDashboard() {
     const [board, setBoard] = useState(null);
     const [contestants, setContestants] = useState([]);
     const [gameStatus, setGameStatus] = useState(null);
+    const [randomDeck, setRandomDeck] = useState(null);
+    const [boardSource, setBoardSource] = useState("Entire Database");
+    const [selectedCategory, setSelectedCategory] = useState("");
+    const [categories, setCategories] = useState([]);
     const [errorMessage, setErrorMessage] = useState("");
 
     const refreshStatus = useCallback(async () => {
         try {
-            const status = await api.familyFeud.status();
+            const [status, deckStatus] = await Promise.all([
+                api.familyFeud.status(),
+                api.familyFeud.randomDeckStatus(),
+            ]);
 
             setGameStatus(status);
+            setRandomDeck(deckStatus);
             setErrorMessage("");
 
             if (status.board_loaded) {
@@ -55,8 +63,31 @@ export default function HostDashboard() {
     );
 
     useEffect(() => {
-        refreshContestants();
-        loadBoard(api.familyFeud.nextBoard);
+        const initializeDashboard = async () => {
+            try {
+                const [source, categoryList] = await Promise.all([
+                    api.familyFeud.getBoardSource(),
+                    api.familyFeud.getCategories(),
+                ]);
+
+                setBoardSource(source?.board_source || "Entire Database");
+                setCategories(categoryList?.categories || []);
+
+                if (source?.board_source === "Category") {
+                    const nextCategory = source?.selected_category || categoryList?.categories?.[0] || "";
+                    setSelectedCategory(nextCategory);
+                } else {
+                    setSelectedCategory("");
+                }
+            } catch (error) {
+                console.error(error);
+            }
+
+            refreshContestants();
+            loadBoard(api.familyFeud.nextBoard);
+        };
+
+        initializeDashboard();
     }, [loadBoard, refreshContestants]);
 
     useEffect(() => {
@@ -97,6 +128,10 @@ export default function HostDashboard() {
     const boardLocked =
         gameStatus?.board_loaded === true &&
         gameStatus?.question_open === true;
+
+    const isRandomDeckComplete =
+        (randomDeck?.total_boards ?? 0) > 0 &&
+        (randomDeck?.boards_remaining ?? 0) === 0;
 
     async function openRound() {
         try {
@@ -144,6 +179,24 @@ export default function HostDashboard() {
             console.error(error);
             setErrorMessage(
                 error.message || "Unable to reveal remaining answers."
+            );
+        }
+    }
+
+    async function nextRandomBoard() {
+        try {
+            const updatedBoard = await api.familyFeud.randomDeckNext();
+
+            if (updatedBoard?.answers) {
+                setBoard(updatedBoard);
+            }
+
+            await refreshStatus();
+            setErrorMessage("");
+        } catch (error) {
+            console.error(error);
+            setErrorMessage(
+                error.message || "Unable to load the next random board."
             );
         }
     }
@@ -226,11 +279,88 @@ export default function HostDashboard() {
                     ) : (
                         leaderboard.map((player) => (
                             <div
-                                className="contestant-row"
+                                className={`contestant-row ${player.active ? "" : "locked"}`}
                                 key={player.id}
                             >
-                                <span>{player.display_name}</span>
-                                <b>{player.score}</b>
+                                <div className="contestant-info">
+                                    <span>
+                                        {player.display_name}
+                                        {!player.active && (
+                                            <small className="contestant-status">
+                                                Locked
+                                            </small>
+                                        )}
+                                    </span>
+                                    <b>{player.score}</b>
+                                </div>
+
+                                <div className="contestant-actions">
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            try {
+                                                await api.contestants.resetScore(
+                                                    player.id
+                                                );
+                                                await refreshContestants();
+                                                setErrorMessage("");
+                                            } catch (error) {
+                                                console.error(error);
+                                                setErrorMessage(
+                                                    error.message ||
+                                                        "Unable to reset score."
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        Reset
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            try {
+                                                await api.contestants.setActive(
+                                                    player.id,
+                                                    !player.active
+                                                );
+                                                await refreshContestants();
+                                                setErrorMessage("");
+                                            } catch (error) {
+                                                console.error(error);
+                                                setErrorMessage(
+                                                    error.message ||
+                                                        "Unable to update contestant status."
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        {player.active
+                                            ? "Lock"
+                                            : "Unlock"}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            try {
+                                                await api.contestants.remove(
+                                                    player.id
+                                                );
+                                                await refreshContestants();
+                                                setErrorMessage("");
+                                            } catch (error) {
+                                                console.error(error);
+                                                setErrorMessage(
+                                                    error.message ||
+                                                        "Unable to remove contestant."
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
                             </div>
                         ))
                     )}
@@ -326,66 +456,252 @@ export default function HostDashboard() {
                 <section className="right-panel">
                     <h2>Host Command Center</h2>
 
-                    <button
-                        type="button"
-                        onClick={openRound}
-                        disabled={
-                            !board ||
-                            gameStatus?.question_open === true
-                        }
-                    >
-                        ▶ Open Round
-                    </button>
+                    <div className="board-control-group">
+                        <div className="board-control-label">Round Control</div>
+                        <div className="board-control-row">
+                            <button
+                                type="button"
+                                onClick={openRound}
+                                disabled={
+                                    !board ||
+                                    gameStatus?.question_open === true
+                                }
+                            >
+                                <span className="button-icon">▶</span>
+                                <span className="button-label">
+                                    <span>Open</span>
+                                    <span>Round</span>
+                                </span>
+                            </button>
 
-                    <button
-                        type="button"
-                        onClick={closeRound}
-                        disabled={
-                            !board ||
-                            gameStatus?.question_open !== true
-                        }
-                    >
-                        ■ Close Round
-                    </button>
+                            <button
+                                type="button"
+                                onClick={closeRound}
+                                disabled={
+                                    !board ||
+                                    gameStatus?.question_open !== true
+                                }
+                            >
+                                <span className="button-icon">■</span>
+                                <span className="button-label">
+                                    <span>Close</span>
+                                    <span>Round</span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
 
-                    <button
-                        type="button"
-                        onClick={() =>
-                            loadBoard(
-                                api.familyFeud.previousBoard
-                            )
-                        }
-                        disabled={boardLocked}
-                        title={
-                            boardLocked
-                                ? "Close the current board before changing boards."
-                                : undefined
-                        }
-                    >
-                        ⏮ Previous Board
-                    </button>
+                    <div className="board-control-group">
+                        <div className="board-control-label">Board Source</div>
+                        <div className="board-control-row">
+                            <select
+                                value={boardSource}
+                                onChange={async (event) => {
+                                    const nextSource = event.target.value;
 
-                    <button
-                        type="button"
-                        onClick={() =>
-                            loadBoard(api.familyFeud.nextBoard)
-                        }
-                        disabled={boardLocked}
-                        title={
-                            boardLocked
-                                ? "Close the current board before changing boards."
-                                : undefined
-                        }
-                    >
-                        ⏭ Next Board
-                    </button>
+                                    try {
+                                        const updatedSource = await api.familyFeud.setBoardSource(nextSource);
+                                        setBoardSource(updatedSource?.board_source || nextSource);
+                                        setSelectedCategory(updatedSource?.selected_category || "");
+                                        if (updatedSource?.board) {
+                                            setBoard(updatedSource.board);
+                                        }
+                                        if (updatedSource?.deck_status) {
+                                            setRandomDeck(updatedSource.deck_status);
+                                        }
+                                        setErrorMessage("");
+                                    } catch (error) {
+                                        console.error(error);
+                                        setErrorMessage(
+                                            error.message ||
+                                                "Unable to update board source."
+                                        );
+                                    }
+                                }}
+                            >
+                                <option value="Entire Database">Entire Database</option>
+                                <option value="Category">Category</option>
+                                <option value="Saved Show" disabled>Saved Show (Coming Soon)</option>
+                                <option value="Playlist" disabled>Playlist (Coming Soon)</option>
+                                <option value="Favorites" disabled>Favorites (Coming Soon)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {boardSource === "Category" && (
+                        <div className="board-control-group">
+                            <div className="board-control-label">Category</div>
+                            <div className="board-control-row">
+                                <select
+                                    value={selectedCategory}
+                                    onChange={async (event) => {
+                                        const nextCategory = event.target.value;
+
+                                        try {
+                                            const updatedSource = await api.familyFeud.setCategorySource(nextCategory);
+                                            setBoardSource(updatedSource?.board_source || "Category");
+                                            setSelectedCategory(updatedSource?.selected_category || nextCategory);
+                                            if (updatedSource?.board) {
+                                                setBoard(updatedSource.board);
+                                            }
+                                            if (updatedSource?.deck_status) {
+                                                setRandomDeck(updatedSource.deck_status);
+                                            }
+                                            setErrorMessage("");
+                                        } catch (error) {
+                                            console.error(error);
+                                            setErrorMessage(
+                                                error.message ||
+                                                    "Unable to update category."
+                                            );
+                                        }
+                                    }}
+                                >
+                                    {categories.length === 0 ? (
+                                        <option value="">No categories found</option>
+                                    ) : (
+                                        categories.map((category) => (
+                                            <option key={category} value={category}>
+                                                {category}
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="board-control-group">
+                        <div className="board-control-label">Random Deck</div>
+                        <div className="board-control-row">
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        await api.familyFeud.randomDeckNew();
+                                        const currentBoard = await api.familyFeud.current();
+                                        if (currentBoard?.answers) {
+                                            setBoard(currentBoard);
+                                        }
+                                        await refreshStatus();
+                                        setErrorMessage("");
+                                    } catch (error) {
+                                        console.error(error);
+                                        setErrorMessage(
+                                            error.message ||
+                                                "Unable to create a new random deck."
+                                        );
+                                    }
+                                }}
+                                disabled={boardLocked}
+                                title={
+                                    boardLocked
+                                        ? "Close the current board before changing boards."
+                                        : undefined
+                                }
+                            >
+                                <span className="button-icon">🔀</span>
+                                <span className="button-label">
+                                    <span>New Random</span>
+                                    <span>Deck</span>
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={nextRandomBoard}
+                                disabled={boardLocked || isRandomDeckComplete}
+                                title={
+                                    boardLocked
+                                        ? "Close the current board before changing boards."
+                                        : isRandomDeckComplete
+                                            ? "The current random deck is complete."
+                                            : undefined
+                                }
+                            >
+                                <span className="button-icon">🎲</span>
+                                <span className="button-label">
+                                    <span>Next</span>
+                                    <span>Random</span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="board-control-group">
+                        <div className="board-control-label">Manual Navigation</div>
+                        <div className="board-control-row">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    loadBoard(api.familyFeud.firstBoard)
+                                }
+                                disabled={boardLocked}
+                                title={
+                                    boardLocked
+                                        ? "Close the current board before changing boards."
+                                        : undefined
+                                }
+                            >
+                                <span className="button-icon">⏮</span>
+                                <span className="button-label">
+                                    <span>First</span>
+                                    <span>Board</span>
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    loadBoard(
+                                        api.familyFeud.previousBoard
+                                    )
+                                }
+                                disabled={boardLocked}
+                                title={
+                                    boardLocked
+                                        ? "Close the current board before changing boards."
+                                        : undefined
+                                }
+                            >
+                                <span className="button-icon">◀</span>
+                                <span className="button-label">
+                                    <span>Previous</span>
+                                    <span>Board</span>
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    loadBoard(api.familyFeud.nextBoard)
+                                }
+                                disabled={boardLocked}
+                                title={
+                                    boardLocked
+                                        ? "Close the current board before changing boards."
+                                        : undefined
+                                }
+                            >
+                                <span className="button-icon">▶</span>
+                                <span className="button-label">
+                                    <span>Next</span>
+                                    <span>Board</span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
 
                     <button
                         type="button"
                         onClick={revealRemaining}
                         disabled={!board}
                     >
-                        👁 Reveal Remaining
+                        <span className="button-icon">👁</span>
+                        <span className="button-label">
+                            <span>Reveal</span>
+                            <span>Remaining</span>
+                        </span>
                     </button>
 
                     <button
@@ -393,8 +709,53 @@ export default function HostDashboard() {
                         onClick={resetRound}
                         disabled={!board}
                     >
-                        🔄 Reset Round
+                        <span className="button-icon">🔄</span>
+                        <span className="button-label">
+                            <span>Reset</span>
+                            <span>Round</span>
+                        </span>
                     </button>
+
+                    <div className="deck-card">
+                        <h3>Random Deck</h3>
+
+                        <div className="deck-stats">
+                            <div>
+                                <span>Boards Remaining</span>
+                                <strong>
+                                    {randomDeck?.boards_remaining ?? 0}
+                                </strong>
+                            </div>
+
+                            <div>
+                                <span>Boards Played</span>
+                                <strong>
+                                    {randomDeck?.boards_played ?? 0}
+                                </strong>
+                            </div>
+                        </div>
+
+                        {isRandomDeckComplete && (
+                            <div className="deck-complete-message">
+                                Random Deck complete. Start a new deck to continue.
+                            </div>
+                        )}
+
+                        <div className="deck-history">
+                            <span>Last 10 Boards</span>
+                            <ul>
+                                {randomDeck?.last_10_boards?.length ? (
+                                    randomDeck.last_10_boards.map(
+                                        (boardId) => (
+                                            <li key={boardId}>{boardId}</li>
+                                        )
+                                    )
+                                ) : (
+                                    <li>None yet</li>
+                                )}
+                            </ul>
+                        </div>
+                    </div>
 
                     <hr />
 

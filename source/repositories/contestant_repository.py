@@ -352,6 +352,51 @@ def delete_contestant(
     return True
 
 
+def set_contestant_active(
+    session: Session,
+    contestant_id: int,
+    active: bool,
+) -> Contestant:
+    """
+    Set a contestant's active state.
+
+    Parameters
+    ----------
+    session:
+        Active SQLAlchemy session.
+    contestant_id:
+        Contestant database ID.
+    active:
+        Whether the contestant is active.
+
+    Returns
+    -------
+    Contestant
+        Updated contestant record.
+
+    Raises
+    ------
+    ValueError
+        If the contestant does not exist.
+    """
+
+    contestant = get_contestant_by_id(
+        session=session,
+        contestant_id=contestant_id,
+    )
+
+    if contestant is None:
+        raise ValueError(
+            f"Contestant ID {contestant_id} was not found."
+        )
+
+    contestant.active = active
+    session.commit()
+    session.refresh(contestant)
+
+    return contestant
+
+
 def reset_contestant_score(
     session: Session,
     contestant_id: int,
