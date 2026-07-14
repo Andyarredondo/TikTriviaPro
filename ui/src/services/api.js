@@ -139,6 +139,16 @@ contestants: {
 
         },
 
+        revealAnswer(rank) {
+
+            return request(`/api/family-feud/reveal/${rank}`, {
+
+                method: "POST",
+
+            });
+
+        },
+
     },
 
 };

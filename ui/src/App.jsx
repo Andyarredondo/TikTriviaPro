@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
+import "./App.css";
 import HostDashboard from "./pages/HostDashboard";
 import ViewerOverlay from "./pages/overlay/ViewerOverlay";
 

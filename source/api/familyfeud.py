@@ -236,6 +236,67 @@ def reveal_remaining():
 
     )
 # ---------------------------------------------------------
+# Individual Answer Reveal
+# ---------------------------------------------------------
+
+@router.post("/reveal/{rank}")
+def reveal_answer(rank: int):
+
+    if GAME.board is None:
+
+        return failure(
+
+            "No board loaded.",
+
+            status_code=400,
+
+        )
+
+    answer = next(
+
+        (answer for answer in GAME.board.answers if answer.rank == rank),
+
+        None,
+
+    )
+
+    if answer is None:
+
+        return failure(
+
+            message="Answer not found.",
+
+            status_code=404,
+
+        )
+
+    if answer.revealed:
+
+        return success(
+
+            data=board_to_dict(GAME.board),
+
+            message="Answer already revealed.",
+
+        )
+
+    answer.revealed = True
+
+    if rank not in GAME.answers_found:
+
+        GAME.answers_found.append(rank)
+
+        GAME.answers_found.sort()
+
+    return success(
+
+        data=board_to_dict(GAME.board),
+
+        message="Answer revealed.",
+
+    )
+
+# ---------------------------------------------------------
 # Game Status
 # ---------------------------------------------------------
 

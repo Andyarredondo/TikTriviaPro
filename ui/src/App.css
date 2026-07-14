@@ -214,7 +214,7 @@ html,body{
 
     display:grid;
 
-    grid-template-columns:55px 1fr 70px;
+    grid-template-columns:55px 1fr 70px auto;
 
     align-items:center;
 
@@ -248,6 +248,43 @@ html,body{
 
     white-space:nowrap;
 
+}
+
+/* -------------------------------------------------- */
+/* Individual Answer Reveal controls (appended)      */
+/* Appended immediately after the .answer-text rule  */
+/* -------------------------------------------------- */
+.answer-controls{
+    display:flex; /* keep contents vertically centered */
+    align-items:center; /* vertical centering */
+    justify-content:flex-end; /* align button to the right */
+}
+
+.answer-controls button{
+    width:95px;
+    height:34px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 10px;
+    border-radius:8px; /* 8px border radius */
+    background:#1f1f1f; /* dark charcoal background */
+    border:2px solid #d4af37; /* gold border */
+    color:#d4af37; /* gold text */
+    font-size:13px;
+    cursor:pointer;
+    transition:background .15s, transform .08s, opacity .15s;
+}
+
+.answer-controls button:hover:not(:disabled){
+    background:#262626; /* subtle hover */
+    transform:translateY(-1px);
+}
+
+.answer-controls button:disabled{
+    opacity:.5; /* disabled appearance when revealed */
+    cursor:default;
+    filter:grayscale(.15);
 }
 
 /* -------------------------------------------------- */

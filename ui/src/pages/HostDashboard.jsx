@@ -144,6 +144,24 @@ export default function HostDashboard() {
         }
     }
 
+    // Individual Answer Reveal
+    async function revealAnswer(rank) {
+        try {
+            const updatedBoard = await api.familyFeud.revealAnswer(
+                rank
+            );
+
+            setBoard(updatedBoard);
+            await refreshStatus();
+            setErrorMessage("");
+        } catch (error) {
+            console.error(error);
+            setErrorMessage(
+                error.message || "Unable to reveal answer."
+            );
+        }
+    }
+
     return (
         <div className="dashboard">
             <header className="topbar">
@@ -210,20 +228,29 @@ export default function HostDashboard() {
 
                     {board?.answers?.map((answer) => (
                         <div className="answer" key={answer.id}>
-                            <div className="rank">
-                                {answer.rank}
-                            </div>
+                            <div className="rank">{answer.rank}</div>
 
                             <div className="answer-text">
-                                {answer.revealed
-                                    ? answer.answer
-                                    : HIDDEN}
+                                {answer.revealed ? answer.answer : HIDDEN}
                             </div>
 
                             <div>
-                                {answer.revealed
-                                    ? answer.points
-                                    : ""}
+                                {answer.revealed ? answer.points : ""}
+                            </div>
+
+                            {/* Individual Answer Reveal */}
+                            <div className="answer-controls">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        revealAnswer(answer.rank)
+                                    }
+                                    disabled={answer.revealed === true}
+                                >
+                                    {answer.revealed
+                                        ? "Revealed"
+                                        : "Reveal"}
+                                </button>
                             </div>
                         </div>
                     ))}
