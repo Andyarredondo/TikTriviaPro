@@ -11,6 +11,7 @@ export default function HostDashboard() {
     const [randomDeck, setRandomDeck] = useState(null);
     const [boardSource, setBoardSource] = useState("Entire Database");
     const [selectedCategory, setSelectedCategory] = useState("");
+    const [selectedAnswerRank, setSelectedAnswerRank] = useState("");
     const [productionPlayback, setProductionPlayback] = useState(null);
     const [playbackBusy, setPlaybackBusy] = useState(false);
     const [categories, setCategories] = useState([]);
@@ -114,6 +115,21 @@ export default function HostDashboard() {
             ),
         [contestants]
     );
+
+    const boardAnswers = board?.answers || [];
+
+    useEffect(() => {
+        const nextSelectedRank =
+            boardAnswers.find((answer) => !answer.revealed)?.rank ??
+            boardAnswers[0]?.rank ??
+            "";
+
+        setSelectedAnswerRank(
+            nextSelectedRank === null || nextSelectedRank === undefined
+                ? ""
+                : String(nextSelectedRank)
+        );
+    }, [boardAnswers]);
 
     const timer = useMemo(() => {
         const seconds = gameStatus?.timer_seconds ?? 0;
@@ -306,6 +322,40 @@ export default function HostDashboard() {
             setErrorMessage(
                 error.message || "Unable to reveal remaining answers."
             );
+        }
+    }
+
+    async function revealNextAnswer() {
+        const nextAnswer = boardAnswers.find((answer) => !answer.revealed);
+
+        if (!nextAnswer) {
+            setErrorMessage("All answers are already revealed.");
+            return;
+        }
+
+        await revealAnswer(nextAnswer.rank);
+    }
+
+    async function revealSelectedAnswer() {
+        if (!selectedAnswerRank) {
+            setErrorMessage("Select an answer to reveal.");
+            return;
+        }
+
+        await revealAnswer(Number(selectedAnswerRank));
+    }
+
+    async function resetAllScores() {
+        try {
+            await Promise.all(
+                contestants.map((player) => api.contestants.resetScore(player.id))
+            );
+
+            await refreshContestants();
+            setErrorMessage("");
+        } catch (error) {
+            console.error(error);
+            setErrorMessage(error.message || "Unable to reset scores.");
         }
     }
 
@@ -617,103 +667,292 @@ export default function HostDashboard() {
                         </div>
                     </div>
 
-                    <div className="board-control-group">
-                        <div className="board-control-label">Board Source</div>
-                        <div className="board-control-row">
-                            <select
-                                value={boardSource}
-                                onChange={async (event) => {
-                                    const nextSource = event.target.value;
+                    <div className="console-grid">
+                        <div className="deck-card console-card console-card--wide">
+                          <h3>Game Controls</h3>
 
-                                    if (nextSource === "Production") {
-                                        setBoardSource(nextSource);
-                                        setSelectedCategory("");
-                                        await refreshProductionPlaybackCurrent();
-                                        setErrorMessage("");
-                                        return;
-                                    }
+                            <div className="board-control-group">
+                                <div className="board-control-label">Board Source</div>
+                                <div className="board-control-row">
+                                    <select
+                                        value={boardSource}
+                                        onChange={async (event) => {
+                                            const nextSource = event.target.value;
 
-                                    if (nextSource === "Random Deck") {
-                                        setBoardSource(nextSource);
-                                        setSelectedCategory("");
-                                        setErrorMessage("");
-                                        return;
-                                    }
-
-                                    try {
-                                        const updatedSource = await api.familyFeud.setBoardSource(nextSource);
-                                        setBoardSource(updatedSource?.board_source || nextSource);
-                                        setSelectedCategory(updatedSource?.selected_category || "");
-                                        if (updatedSource?.board) {
-                                            setBoard(updatedSource.board);
-                                        }
-                                        if (updatedSource?.deck_status) {
-                                            setRandomDeck(updatedSource.deck_status);
-                                        }
-                                        setErrorMessage("");
-                                    } catch (error) {
-                                        console.error(error);
-                                        setErrorMessage(
-                                            error.message ||
-                                                "Unable to update board source."
-                                        );
-                                    }
-                                }}
-                            >
-                                <option value="Entire Database">Entire Database</option>
-                                <option value="Category">Category</option>
-                                <option value="Production">Production</option>
-                                <option value="Random Deck">Random Deck</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {boardSource === "Category" && (
-                        <div className="board-control-group">
-                            <div className="board-control-label">Category</div>
-                            <div className="board-control-row">
-                                <select
-                                    value={selectedCategory}
-                                    onChange={async (event) => {
-                                        const nextCategory = event.target.value;
-
-                                        try {
-                                            const updatedSource = await api.familyFeud.setCategorySource(nextCategory);
-                                            setBoardSource(updatedSource?.board_source || "Category");
-                                            setSelectedCategory(updatedSource?.selected_category || nextCategory);
-                                            if (updatedSource?.board) {
-                                                setBoard(updatedSource.board);
+                                            if (nextSource === "Production") {
+                                                setBoardSource(nextSource);
+                                                setSelectedCategory("");
+                                                await refreshProductionPlaybackCurrent();
+                                                setErrorMessage("");
+                                                return;
                                             }
-                                            if (updatedSource?.deck_status) {
-                                                setRandomDeck(updatedSource.deck_status);
+
+                                            if (nextSource === "Random Deck") {
+                                                setBoardSource(nextSource);
+                                                setSelectedCategory("");
+                                                setErrorMessage("");
+                                                return;
                                             }
-                                            setErrorMessage("");
-                                        } catch (error) {
-                                            console.error(error);
-                                            setErrorMessage(
-                                                error.message ||
-                                                    "Unable to update category."
-                                            );
+
+                                            try {
+                                                const updatedSource = await api.familyFeud.setBoardSource(nextSource);
+                                                setBoardSource(updatedSource?.board_source || nextSource);
+                                                setSelectedCategory(updatedSource?.selected_category || "");
+                                                if (updatedSource?.board) {
+                                                    setBoard(updatedSource.board);
+                                                }
+                                                if (updatedSource?.deck_status) {
+                                                    setRandomDeck(updatedSource.deck_status);
+                                                }
+                                                setErrorMessage("");
+                                            } catch (error) {
+                                                console.error(error);
+                                                setErrorMessage(
+                                                    error.message ||
+                                                        "Unable to update board source."
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        <option value="Entire Database">Entire Database</option>
+                                        <option value="Category">Category</option>
+                                        <option value="Production">Production</option>
+                                        <option value="Random Deck">Random Deck</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="board-control-group">
+                                <div className="board-control-label">Board Navigation</div>
+                                <div className="board-control-row">
+                                    <button
+                                        type="button"
+                                        onClick={() => loadBoard(api.familyFeud.firstBoard)}
+                                        disabled={boardLocked || isProductionSource}
+                                        title={
+                                            boardLocked
+                                                ? "Close the current board before changing boards."
+                                                : isProductionSource
+                                                    ? "Use Production controls while Production is selected."
+                                                    : undefined
                                         }
-                                    }}
-                                >
-                                    {categories.length === 0 ? (
-                                        <option value="">No categories found</option>
-                                    ) : (
-                                        categories.map((category) => (
-                                            <option key={category} value={category}>
-                                                {category}
+                                    >
+                                        <span className="button-icon">⏮</span>
+                                        <span className="button-label">
+                                            <span>First</span>
+                                            <span>Board</span>
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => loadBoard(api.familyFeud.previousBoard)}
+                                        disabled={boardLocked || isProductionSource}
+                                        title={
+                                            boardLocked
+                                                ? "Close the current board before changing boards."
+                                                : isProductionSource
+                                                    ? "Use Production controls while Production is selected."
+                                                    : undefined
+                                        }
+                                    >
+                                        <span className="button-icon">◀</span>
+                                        <span className="button-label">
+                                            <span>Previous</span>
+                                            <span>Board</span>
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => loadBoard(api.familyFeud.nextBoard)}
+                                        disabled={boardLocked || isProductionSource}
+                                        title={
+                                            boardLocked
+                                                ? "Close the current board before changing boards."
+                                                : isProductionSource
+                                                    ? "Use Production controls while Production is selected."
+                                                    : undefined
+                                        }
+                                    >
+                                        <span className="button-icon">▶</span>
+                                        <span className="button-label">
+                                            <span>Next</span>
+                                            <span>Board</span>
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {boardSource === "Category" && (
+                                <div className="board-control-group">
+                                    <div className="board-control-label">Category</div>
+                                    <div className="board-control-row">
+                                        <select
+                                            value={selectedCategory}
+                                            onChange={async (event) => {
+                                                const nextCategory = event.target.value;
+
+                                                try {
+                                                    const updatedSource = await api.familyFeud.setCategorySource(nextCategory);
+                                                    setBoardSource(updatedSource?.board_source || "Category");
+                                                    setSelectedCategory(updatedSource?.selected_category || nextCategory);
+                                                    if (updatedSource?.board) {
+                                                        setBoard(updatedSource.board);
+                                                    }
+                                                    if (updatedSource?.deck_status) {
+                                                        setRandomDeck(updatedSource.deck_status);
+                                                    }
+                                                    setErrorMessage("");
+                                                } catch (error) {
+                                                    console.error(error);
+                                                    setErrorMessage(
+                                                        error.message ||
+                                                            "Unable to update category."
+                                                    );
+                                                }
+                                            }}
+                                        >
+                                            {categories.length === 0 ? (
+                                                <option value="">No categories found</option>
+                                            ) : (
+                                                categories.map((category) => (
+                                                    <option key={category} value={category}>
+                                                        {category}
+                                                    </option>
+                                                ))
+                                            )}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="board-control-group">
+                                <div className="board-control-label">Board Actions</div>
+
+                                <div className="board-control-row">
+                                    <button
+                                        type="button"
+                                        onClick={revealNextAnswer}
+                                        disabled={!board || boardAnswers.every((answer) => answer.revealed)}
+                                    >
+                                        <span className="button-icon">👁</span>
+                                        <span className="button-label">
+                                            <span>Reveal Next</span>
+                                            <span>Answer</span>
+                                        </span>
+                                    </button>
+
+                                    <select
+                                        value={selectedAnswerRank}
+                                        onChange={(event) => setSelectedAnswerRank(event.target.value)}
+                                        disabled={!board || boardAnswers.length === 0}
+                                    >
+                                        <option value="">Reveal specific answer</option>
+                                        {boardAnswers.map((answer) => (
+                                            <option key={answer.id} value={answer.rank}>
+                                                {answer.rank}. {answer.answer}
                                             </option>
-                                        ))
-                                    )}
-                                </select>
+                                        ))}
+                                    </select>
+
+                                    <button
+                                        type="button"
+                                        onClick={revealSelectedAnswer}
+                                        disabled={!board || !selectedAnswerRank}
+                                    >
+                                        <span className="button-icon">🎯</span>
+                                        <span className="button-label">
+                                            <span>Reveal</span>
+                                            <span>Specific</span>
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <div className="board-control-row">
+                                    <button
+                                        type="button"
+                                        onClick={revealRemaining}
+                                        disabled={!board}
+                                    >
+                                        <span className="button-icon">✨</span>
+                                        <span className="button-label">
+                                            <span>Reveal All</span>
+                                            <span>Answers</span>
+                                        </span>
+                                    </button>
+
+                                    {/* TODO: wire hide-all answers backend action. */}
+                                    <button type="button" disabled>
+                                        <span className="button-icon">🙈</span>
+                                        <span className="button-label">
+                                            <span>Hide All</span>
+                                            <span>Answers</span>
+                                        </span>
+                                    </button>
+
+                                    {/* TODO: wire blank-board backend action. */}
+                                    <button type="button" disabled>
+                                        <span className="button-icon">⬛</span>
+                                        <span className="button-label">
+                                            <span>Blank</span>
+                                            <span>Board</span>
+                                        </span>
+                                    </button>
+
+                                    {/* TODO: wire show-board backend action. */}
+                                    <button type="button" disabled>
+                                        <span className="button-icon">🖥</span>
+                                        <span className="button-label">
+                                            <span>Show</span>
+                                            <span>Board</span>
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <div className="board-control-row">
+                                    <button
+                                        type="button"
+                                        onClick={resetRound}
+                                        disabled={!board}
+                                    >
+                                        <span className="button-icon">🔄</span>
+                                        <span className="button-label">
+                                            <span>Reset</span>
+                                            <span>Round</span>
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    )}
 
-                    {boardSource === "Production" && (
-                        <div className="board-control-group">
-                            <div className="board-control-label">Production Playback</div>
+                        <div className="deck-card console-card">
+                            <h3>Game Mode</h3>
+
+                            <div className="board-control-row console-button-grid console-button-grid--two">
+                                {/* TODO: wire round mode backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">◉</span>
+                                    <span className="button-label">
+                                        <span>Normal</span>
+                                        <span>Round</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire fast money backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">⚡</span>
+                                    <span className="button-label">
+                                        <span>Fast</span>
+                                        <span>Money</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="deck-card console-card console-card--wide">
+                            <h3>Production</h3>
+
                             <div className="deck-history">
                                 <span>Selected Production</span>
                                 <strong>
@@ -721,40 +960,245 @@ export default function HostDashboard() {
                                 </strong>
                             </div>
 
-                            <div className="deck-card">
-                                <h3>Production Playback</h3>
+                            <div className="board-control-row">
+                                <button
+                                    type="button"
+                                    onClick={startProductionPlayback}
+                                    disabled={playbackBusy || !selectedProduction?.id}
+                                >
+                                    <span className="button-icon">▶</span>
+                                    <span className="button-label">
+                                        <span>Start</span>
+                                        <span>Production</span>
+                                    </span>
+                                </button>
+                            </div>
 
-                                <div className="deck-stats">
-                                    <div>
-                                        <span>Current Production</span>
-                                        <strong>{playbackProductionName}</strong>
-                                    </div>
+                            <div className="board-control-row console-button-grid console-button-grid--three">
+                                <button
+                                    type="button"
+                                    onClick={previousProductionPlaybackItem}
+                                    disabled={playbackBusy || !hasActiveProductionPlayback}
+                                    title={
+                                        !hasActiveProductionPlayback
+                                            ? "Start production playback first."
+                                            : undefined
+                                    }
+                                >
+                                    <span className="button-icon">◀</span>
+                                    <span className="button-label">
+                                        <span>Previous</span>
+                                        <span>Production Item</span>
+                                    </span>
+                                </button>
 
-                                    <div>
-                                        <span>Current Item</span>
-                                        <strong>{playbackCurrentItem?.sequence ?? "-"}</strong>
-                                    </div>
+                                <button
+                                    type="button"
+                                    onClick={nextProductionPlaybackItem}
+                                    disabled={playbackBusy || !hasActiveProductionPlayback}
+                                    title={
+                                        !hasActiveProductionPlayback
+                                            ? "Start production playback first."
+                                            : undefined
+                                    }
+                                >
+                                    <span className="button-icon">▶</span>
+                                    <span className="button-label">
+                                        <span>Next</span>
+                                        <span>Production Item</span>
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={endProductionPlayback}
+                                    disabled={playbackBusy || !hasActiveProductionPlayback}
+                                    title={
+                                        !hasActiveProductionPlayback
+                                            ? "Start production playback first."
+                                            : undefined
+                                    }
+                                >
+                                    <span className="button-icon">⏹</span>
+                                    <span className="button-label">
+                                        <span>End</span>
+                                        <span>Production</span>
+                                    </span>
+                                </button>
+                            </div>
+
+                            <div className="deck-stats">
+                                <div>
+                                    <span>Current Production</span>
+                                    <strong>{playbackProductionName}</strong>
                                 </div>
 
-                                <div className="deck-history">
-                                    <span>Progress</span>
-                                    <strong>{playbackProgressText}</strong>
+                                <div>
+                                    <span>Current Item</span>
+                                    <strong>{playbackCurrentItem?.sequence ?? "-"}</strong>
+                                </div>
+                            </div>
+
+                            <div className="deck-history">
+                                <span>Progress</span>
+                                <strong>{playbackProgressText}</strong>
+                            </div>
+
+                            <div className="deck-stats">
+                                <div>
+                                    <span>Current Engine</span>
+                                    <strong>{playbackEngineText}</strong>
                                 </div>
 
-                                <div className="deck-stats">
-                                    <div>
-                                        <span>Current Engine</span>
-                                        <strong>{playbackEngineText}</strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Current Item ID</span>
-                                        <strong>{playbackItemIdText}</strong>
-                                    </div>
+                                <div>
+                                    <span>Current Item ID</span>
+                                    <strong>{playbackItemIdText}</strong>
                                 </div>
                             </div>
                         </div>
-                    )}
+
+                        <div className="deck-card console-card">
+                            <h3>Scoring</h3>
+
+                            <div className="board-control-row console-button-grid console-button-grid--three">
+                                {/* TODO: wire team scoring backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">＋</span>
+                                    <span className="button-label">
+                                        <span>Team A</span>
+                                        <span>+</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire team scoring backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">－</span>
+                                    <span className="button-label">
+                                        <span>Team A</span>
+                                        <span>-</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire team scoring backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">＋</span>
+                                    <span className="button-label">
+                                        <span>Team B</span>
+                                        <span>+</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire team scoring backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">－</span>
+                                    <span className="button-label">
+                                        <span>Team B</span>
+                                        <span>-</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire manual score entry backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">✎</span>
+                                    <span className="button-label">
+                                        <span>Manual</span>
+                                        <span>Score Entry</span>
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={resetAllScores}
+                                    disabled={contestants.length === 0}
+                                >
+                                    <span className="button-icon">🧹</span>
+                                    <span className="button-label">
+                                        <span>Reset</span>
+                                        <span>Scores</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="deck-card console-card">
+                            <h3>Display</h3>
+
+                            <div className="board-control-row console-button-grid console-button-grid--three">
+                                {/* TODO: wire host-view backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">🎛</span>
+                                    <span className="button-label">
+                                        <span>Host</span>
+                                        <span>View</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire audience-view backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">📺</span>
+                                    <span className="button-label">
+                                        <span>Audience</span>
+                                        <span>View</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire viewer-view backend action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">👀</span>
+                                    <span className="button-label">
+                                        <span>Viewer</span>
+                                        <span>View</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="deck-card console-card">
+                            <h3>Broadcast</h3>
+
+                            <div className="board-control-row console-button-grid console-button-grid--two">
+                                {/* TODO: wire intro broadcast action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">✨</span>
+                                    <span className="button-label">
+                                        <span>Intro</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire outro broadcast action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">🌙</span>
+                                    <span className="button-label">
+                                        <span>Outro</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire commercial break action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">⏸</span>
+                                    <span className="button-label">
+                                        <span>Commercial</span>
+                                        <span>Break</span>
+                                    </span>
+                                </button>
+
+                                {/* TODO: wire resume-show action. */}
+                                <button type="button" disabled>
+                                    <span className="button-icon">▶</span>
+                                    <span className="button-label">
+                                        <span>Resume</span>
+                                        <span>Show</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <ProductionManager
+                        selectedProduction={selectedProduction}
+                        setSelectedProduction={setSelectedProduction}
+                    />
 
                     <div className="board-control-group">
                         <div className="board-control-label">Random Deck</div>
@@ -812,142 +1256,6 @@ export default function HostDashboard() {
                             </button>
                         </div>
                     </div>
-
-                    <div className="board-control-group">
-                        <div className="board-control-label">Manual Navigation</div>
-                        <div className="board-control-row">
-                            <button
-                                type="button"
-                                onClick={
-                                    isProductionSource
-                                        ? startProductionPlayback
-                                        : () => loadBoard(api.familyFeud.firstBoard)
-                                }
-                                disabled={
-                                    isProductionSource
-                                        ? playbackBusy || !selectedProduction?.id
-                                        : boardLocked
-                                }
-                                title={
-                                    isProductionSource
-                                        ? !selectedProduction?.id
-                                            ? "Select a production first."
-                                            : undefined
-                                        : boardLocked
-                                        ? "Close the current board before changing boards."
-                                        : undefined
-                                }
-                            >
-                                <span className="button-icon">
-                                    {isProductionSource ? "▶" : "⏮"}
-                                </span>
-                                <span className="button-label">
-                                    <span>{isProductionSource ? "Start" : "First"}</span>
-                                    <span>{isProductionSource ? "Production" : "Board"}</span>
-                                </span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={
-                                    isProductionSource
-                                        ? previousProductionPlaybackItem
-                                        : () => loadBoard(api.familyFeud.previousBoard)
-                                }
-                                disabled={
-                                    isProductionSource
-                                        ? playbackBusy || !hasActiveProductionPlayback
-                                        : boardLocked
-                                }
-                                title={
-                                    isProductionSource
-                                        ? !hasActiveProductionPlayback
-                                            ? "Start production playback first."
-                                            : undefined
-                                        : boardLocked
-                                        ? "Close the current board before changing boards."
-                                        : undefined
-                                }
-                            >
-                                <span className="button-icon">◀</span>
-                                <span className="button-label">
-                                    <span>Previous</span>
-                                    <span>{isProductionSource ? "Item" : "Board"}</span>
-                                </span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={
-                                    isProductionSource
-                                        ? nextProductionPlaybackItem
-                                        : () => loadBoard(api.familyFeud.nextBoard)
-                                }
-                                disabled={
-                                    isProductionSource
-                                        ? playbackBusy || !hasActiveProductionPlayback
-                                        : boardLocked
-                                }
-                                title={
-                                    isProductionSource
-                                        ? !hasActiveProductionPlayback
-                                            ? "Start production playback first."
-                                            : undefined
-                                        : boardLocked
-                                        ? "Close the current board before changing boards."
-                                        : undefined
-                                }
-                            >
-                                <span className="button-icon">▶</span>
-                                <span className="button-label">
-                                    <span>Next</span>
-                                    <span>{isProductionSource ? "Item" : "Board"}</span>
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {isProductionSource && (
-                        <button
-                            type="button"
-                            onClick={endProductionPlayback}
-                            disabled={playbackBusy || !hasActiveProductionPlayback}
-                        >
-                            <span className="button-icon">⏹</span>
-                            <span className="button-label">
-                                <span>End</span>
-                                <span>Production</span>
-                            </span>
-                        </button>
-                    )}
-
-                    <button
-                        type="button"
-                        onClick={revealRemaining}
-                        disabled={!board}
-                    >
-                        <span className="button-icon">👁</span>
-                        <span className="button-label">
-                            <span>Reveal</span>
-                            <span>Remaining</span>
-                        </span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={resetRound}
-                        disabled={!board}
-                    >
-                        <span className="button-icon">🔄</span>
-                        <span className="button-label">
-                            <span>Reset</span>
-                            <span>Round</span>
-                        </span>
-                    </button>
-                    <ProductionManager
-    selectedProduction={selectedProduction}
-    setSelectedProduction={setSelectedProduction}
-/>      
 
                     <div className="deck-card">
                         <h3>Random Deck</h3>

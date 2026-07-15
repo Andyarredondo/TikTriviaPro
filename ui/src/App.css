@@ -448,6 +448,21 @@ html,body{
     margin-bottom:12px;
 }
 
+.console-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+    margin-bottom:12px;
+}
+
+.console-card{
+    margin:0;
+}
+
+.console-card--wide{
+    grid-column:1 / -1;
+}
+
 .board-control-label{
     font-size:12px;
     color:#9d9d9d;
@@ -488,10 +503,47 @@ html,body{
     gap:8px;
 }
 
+.console-button-grid{
+    display:grid;
+    gap:8px;
+}
+
+.console-button-grid--two{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+}
+
+.console-button-grid--three{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+}
+
+.console-button-grid > button{
+    width:100%;
+    margin-bottom:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    min-height:64px;
+}
+
 .right-panel .board-control-row{
     display:flex;
     flex-wrap:nowrap;
     gap:8px;
+}
+
+.right-panel .console-button-grid{
+    display:grid;
+}
+
+.right-panel .console-button-grid > button{
+    width:100%;
+    margin-bottom:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    min-height:64px;
 }
 
 .right-panel .board-control-row > button{
@@ -508,6 +560,16 @@ html,body{
 .board-control-row > button{
     width:0;
     flex:1 1 0;
+    margin-bottom:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    min-height:64px;
+}
+
+.right-panel .console-button-grid > button{
+    width:100%;
     margin-bottom:0;
     display:flex;
     flex-direction:column;
@@ -667,6 +729,23 @@ html,body{
 
         grid-template-columns:1fr;
 
+    }
+
+    .console-grid{
+        grid-template-columns:1fr;
+    }
+
+    .console-card--wide{
+        grid-column:auto;
+    }
+
+}
+
+@media (max-width:700px){
+
+    .console-button-grid--two,
+    .console-button-grid--three{
+        grid-template-columns:1fr;
     }
 
 }

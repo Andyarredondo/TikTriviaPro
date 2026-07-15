@@ -111,6 +111,39 @@ productions: {
     },
 
 },
+
+    productionPlayback: {
+
+        start(productionId) {
+            return request(`/api/production-playback/start/${productionId}`, {
+                method: "POST",
+            });
+        },
+
+        current() {
+            return request("/api/production-playback/current");
+        },
+
+        next() {
+            return request("/api/production-playback/next", {
+                method: "POST",
+            });
+        },
+
+        previous() {
+            return request("/api/production-playback/previous", {
+                method: "POST",
+            });
+        },
+
+        end() {
+            return request("/api/production-playback/end", {
+                method: "POST",
+            });
+        },
+
+    },
+
     familyFeud: {
 
         current() {
