@@ -412,7 +412,7 @@ export default function HostDashboard() {
 
             <div className="main-grid">
                 <section className="left-panel">
-                    <h2>Contestants</h2>
+                    <h2>Live Players</h2>
 
                     <div className="contestant-mode">
                         Registration Mode
@@ -446,97 +446,23 @@ export default function HostDashboard() {
                         </select>
                     </div>
 
-                    <hr />
+                    <div className="player-header-row">
+                        <span>Player Name</span>
+                        <span>Current Score</span>
+                    </div>
 
                     {leaderboard.length === 0 ? (
                         <div className="placeholder">
-                            No contestants
+                            No live players
                         </div>
                     ) : (
                         leaderboard.map((player) => (
                             <div
-                                className={`contestant-row ${player.active ? "" : "locked"}`}
+                                className="contestant-row live-player-row"
                                 key={player.id}
                             >
-                                <div className="contestant-info">
-                                    <span>
-                                        {player.display_name}
-                                        {!player.active && (
-                                            <small className="contestant-status">
-                                                Locked
-                                            </small>
-                                        )}
-                                    </span>
-                                    <b>{player.score}</b>
-                                </div>
-
-                                <div className="contestant-actions">
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            try {
-                                                await api.contestants.resetScore(
-                                                    player.id
-                                                );
-                                                await refreshContestants();
-                                                setErrorMessage("");
-                                            } catch (error) {
-                                                console.error(error);
-                                                setErrorMessage(
-                                                    error.message ||
-                                                        "Unable to reset score."
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        Reset
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            try {
-                                                await api.contestants.setActive(
-                                                    player.id,
-                                                    !player.active
-                                                );
-                                                await refreshContestants();
-                                                setErrorMessage("");
-                                            } catch (error) {
-                                                console.error(error);
-                                                setErrorMessage(
-                                                    error.message ||
-                                                        "Unable to update contestant status."
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        {player.active
-                                            ? "Lock"
-                                            : "Unlock"}
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            try {
-                                                await api.contestants.remove(
-                                                    player.id
-                                                );
-                                                await refreshContestants();
-                                                setErrorMessage("");
-                                            } catch (error) {
-                                                console.error(error);
-                                                setErrorMessage(
-                                                    error.message ||
-                                                        "Unable to remove contestant."
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
+                                <span className="live-player-name">{player.display_name}</span>
+                                <b className="live-player-points">{player.score}</b>
                             </div>
                         ))
                     )}
@@ -632,44 +558,156 @@ export default function HostDashboard() {
                 <section className="right-panel">
                     <h2>Host Command Center</h2>
 
-                    <div className="board-control-group">
-                        <div className="board-control-label">Round Control</div>
-                        <div className="board-control-row">
-                            <button
-                                type="button"
-                                onClick={openRound}
-                                disabled={
-                                    !board ||
-                                    gameStatus?.question_open === true
-                                }
-                            >
-                                <span className="button-icon">▶</span>
-                                <span className="button-label">
-                                    <span>Open</span>
-                                    <span>Round</span>
-                                </span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={closeRound}
-                                disabled={
-                                    !board ||
-                                    gameStatus?.question_open !== true
-                                }
-                            >
-                                <span className="button-icon">■</span>
-                                <span className="button-label">
-                                    <span>Close</span>
-                                    <span>Round</span>
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-
                     <div className="console-grid">
                         <div className="deck-card console-card console-card--wide">
-                          <h3>Game Controls</h3>
+                            <h3>Production</h3>
+
+                            <div className="deck-history">
+                                <span>Selected Production</span>
+                                <strong>
+                                    {selectedProduction?.production_name || "None Selected"}
+                                </strong>
+                            </div>
+
+                            <div className="board-control-row">
+                                <button
+                                    type="button"
+                                    onClick={startProductionPlayback}
+                                    disabled={playbackBusy || !selectedProduction?.id}
+                                >
+                                    <span className="button-icon">▶</span>
+                                    <span className="button-label">
+                                        <span>Start</span>
+                                        <span>Production</span>
+                                    </span>
+                                </button>
+                            </div>
+
+                            <div className="board-control-row console-button-grid console-button-grid--three">
+                                <button
+                                    type="button"
+                                    onClick={previousProductionPlaybackItem}
+                                    disabled={playbackBusy || !hasActiveProductionPlayback}
+                                    title={
+                                        !hasActiveProductionPlayback
+                                            ? "Start production playback first."
+                                            : undefined
+                                    }
+                                >
+                                    <span className="button-icon">◀</span>
+                                    <span className="button-label">
+                                        <span>Previous</span>
+                                        <span>Production Item</span>
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={nextProductionPlaybackItem}
+                                    disabled={playbackBusy || !hasActiveProductionPlayback}
+                                    title={
+                                        !hasActiveProductionPlayback
+                                            ? "Start production playback first."
+                                            : undefined
+                                    }
+                                >
+                                    <span className="button-icon">▶</span>
+                                    <span className="button-label">
+                                        <span>Next</span>
+                                        <span>Production Item</span>
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={endProductionPlayback}
+                                    disabled={playbackBusy || !hasActiveProductionPlayback}
+                                    title={
+                                        !hasActiveProductionPlayback
+                                            ? "Start production playback first."
+                                            : undefined
+                                    }
+                                >
+                                    <span className="button-icon">⏹</span>
+                                    <span className="button-label">
+                                        <span>End</span>
+                                        <span>Production</span>
+                                    </span>
+                                </button>
+                            </div>
+
+                            <div className="deck-stats">
+                                <div>
+                                    <span>Current Production</span>
+                                    <strong>{playbackProductionName}</strong>
+                                </div>
+
+                                <div>
+                                    <span>Current Item</span>
+                                    <strong>{playbackCurrentItem?.sequence ?? "-"}</strong>
+                                </div>
+                            </div>
+
+                            <div className="deck-history">
+                                <span>Progress</span>
+                                <strong>{playbackProgressText}</strong>
+                            </div>
+
+                            <div className="deck-stats">
+                                <div>
+                                    <span>Current Engine</span>
+                                    <strong>{playbackEngineText}</strong>
+                                </div>
+
+                                <div>
+                                    <span>Current Item ID</span>
+                                    <strong>{playbackItemIdText}</strong>
+                                </div>
+                            </div>
+
+                            <ProductionManager
+                                selectedProduction={selectedProduction}
+                                setSelectedProduction={setSelectedProduction}
+                            />
+                        </div>
+
+                        <div className="deck-card console-card console-card--wide">
+                            <h3>Game Controls</h3>
+
+                            <div className="board-control-group">
+                                <div className="board-control-label">Round Control</div>
+                                <div className="board-control-row">
+                                    <button
+                                        type="button"
+                                        onClick={openRound}
+                                        disabled={
+                                            !board ||
+                                            gameStatus?.question_open === true
+                                        }
+                                    >
+                                        <span className="button-icon">▶</span>
+                                        <span className="button-label">
+                                            <span>Open</span>
+                                            <span>Round</span>
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={closeRound}
+                                        disabled={
+                                            !board ||
+                                            gameStatus?.question_open !== true
+                                        }
+                                    >
+                                        <span className="button-icon">■</span>
+                                        <span className="button-label">
+                                            <span>Close</span>
+                                            <span>Round</span>
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
 
                             <div className="board-control-group">
                                 <div className="board-control-label">Board Source</div>
@@ -924,10 +962,6 @@ export default function HostDashboard() {
                                     </button>
                                 </div>
                             </div>
-                        </div>
-
-                        <div className="deck-card console-card">
-                            <h3>Game Mode</h3>
 
                             <div className="board-control-row console-button-grid console-button-grid--two">
                                 {/* TODO: wire round mode backend action. */}
@@ -945,209 +979,6 @@ export default function HostDashboard() {
                                     <span className="button-label">
                                         <span>Fast</span>
                                         <span>Money</span>
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="deck-card console-card console-card--wide">
-                            <h3>Production</h3>
-
-                            <div className="deck-history">
-                                <span>Selected Production</span>
-                                <strong>
-                                    {selectedProduction?.production_name || "None Selected"}
-                                </strong>
-                            </div>
-
-                            <div className="board-control-row">
-                                <button
-                                    type="button"
-                                    onClick={startProductionPlayback}
-                                    disabled={playbackBusy || !selectedProduction?.id}
-                                >
-                                    <span className="button-icon">▶</span>
-                                    <span className="button-label">
-                                        <span>Start</span>
-                                        <span>Production</span>
-                                    </span>
-                                </button>
-                            </div>
-
-                            <div className="board-control-row console-button-grid console-button-grid--three">
-                                <button
-                                    type="button"
-                                    onClick={previousProductionPlaybackItem}
-                                    disabled={playbackBusy || !hasActiveProductionPlayback}
-                                    title={
-                                        !hasActiveProductionPlayback
-                                            ? "Start production playback first."
-                                            : undefined
-                                    }
-                                >
-                                    <span className="button-icon">◀</span>
-                                    <span className="button-label">
-                                        <span>Previous</span>
-                                        <span>Production Item</span>
-                                    </span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={nextProductionPlaybackItem}
-                                    disabled={playbackBusy || !hasActiveProductionPlayback}
-                                    title={
-                                        !hasActiveProductionPlayback
-                                            ? "Start production playback first."
-                                            : undefined
-                                    }
-                                >
-                                    <span className="button-icon">▶</span>
-                                    <span className="button-label">
-                                        <span>Next</span>
-                                        <span>Production Item</span>
-                                    </span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={endProductionPlayback}
-                                    disabled={playbackBusy || !hasActiveProductionPlayback}
-                                    title={
-                                        !hasActiveProductionPlayback
-                                            ? "Start production playback first."
-                                            : undefined
-                                    }
-                                >
-                                    <span className="button-icon">⏹</span>
-                                    <span className="button-label">
-                                        <span>End</span>
-                                        <span>Production</span>
-                                    </span>
-                                </button>
-                            </div>
-
-                            <div className="deck-stats">
-                                <div>
-                                    <span>Current Production</span>
-                                    <strong>{playbackProductionName}</strong>
-                                </div>
-
-                                <div>
-                                    <span>Current Item</span>
-                                    <strong>{playbackCurrentItem?.sequence ?? "-"}</strong>
-                                </div>
-                            </div>
-
-                            <div className="deck-history">
-                                <span>Progress</span>
-                                <strong>{playbackProgressText}</strong>
-                            </div>
-
-                            <div className="deck-stats">
-                                <div>
-                                    <span>Current Engine</span>
-                                    <strong>{playbackEngineText}</strong>
-                                </div>
-
-                                <div>
-                                    <span>Current Item ID</span>
-                                    <strong>{playbackItemIdText}</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="deck-card console-card">
-                            <h3>Scoring</h3>
-
-                            <div className="board-control-row console-button-grid console-button-grid--three">
-                                {/* TODO: wire team scoring backend action. */}
-                                <button type="button" disabled>
-                                    <span className="button-icon">＋</span>
-                                    <span className="button-label">
-                                        <span>Team A</span>
-                                        <span>+</span>
-                                    </span>
-                                </button>
-
-                                {/* TODO: wire team scoring backend action. */}
-                                <button type="button" disabled>
-                                    <span className="button-icon">－</span>
-                                    <span className="button-label">
-                                        <span>Team A</span>
-                                        <span>-</span>
-                                    </span>
-                                </button>
-
-                                {/* TODO: wire team scoring backend action. */}
-                                <button type="button" disabled>
-                                    <span className="button-icon">＋</span>
-                                    <span className="button-label">
-                                        <span>Team B</span>
-                                        <span>+</span>
-                                    </span>
-                                </button>
-
-                                {/* TODO: wire team scoring backend action. */}
-                                <button type="button" disabled>
-                                    <span className="button-icon">－</span>
-                                    <span className="button-label">
-                                        <span>Team B</span>
-                                        <span>-</span>
-                                    </span>
-                                </button>
-
-                                {/* TODO: wire manual score entry backend action. */}
-                                <button type="button" disabled>
-                                    <span className="button-icon">✎</span>
-                                    <span className="button-label">
-                                        <span>Manual</span>
-                                        <span>Score Entry</span>
-                                    </span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={resetAllScores}
-                                    disabled={contestants.length === 0}
-                                >
-                                    <span className="button-icon">🧹</span>
-                                    <span className="button-label">
-                                        <span>Reset</span>
-                                        <span>Scores</span>
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="deck-card console-card">
-                            <h3>Display</h3>
-
-                            <div className="board-control-row console-button-grid console-button-grid--three">
-                                {/* TODO: wire host-view backend action. */}
-                                <button type="button" disabled>
-                                    <span className="button-icon">🎛</span>
-                                    <span className="button-label">
-                                        <span>Host</span>
-                                        <span>View</span>
-                                    </span>
-                                </button>
-
-                                {/* TODO: wire audience-view backend action. */}
-                                <button type="button" disabled>
-                                    <span className="button-icon">📺</span>
-                                    <span className="button-label">
-                                        <span>Audience</span>
-                                        <span>View</span>
-                                    </span>
-                                </button>
-
-                                {/* TODO: wire viewer-view backend action. */}
-                                <button type="button" disabled>
-                                    <span className="button-icon">👀</span>
-                                    <span className="button-label">
-                                        <span>Viewer</span>
-                                        <span>View</span>
                                     </span>
                                 </button>
                             </div>
@@ -1193,127 +1024,115 @@ export default function HostDashboard() {
                             </div>
                         </div>
 
-                    </div>
+                        <div className="deck-card console-card">
+                            <h3>Random Deck</h3>
 
-                    <ProductionManager
-                        selectedProduction={selectedProduction}
-                        setSelectedProduction={setSelectedProduction}
-                    />
-
-                    <div className="board-control-group">
-                        <div className="board-control-label">Random Deck</div>
-                        <div className="board-control-row">
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    try {
-                                        await api.familyFeud.randomDeckNew();
-                                        const currentBoard = await api.familyFeud.current();
-                                        if (currentBoard?.answers) {
-                                            setBoard(currentBoard);
+                            <div className="board-control-row">
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        try {
+                                            await api.familyFeud.randomDeckNew();
+                                            const currentBoard = await api.familyFeud.current();
+                                            if (currentBoard?.answers) {
+                                                setBoard(currentBoard);
+                                            }
+                                            await refreshStatus();
+                                            setErrorMessage("");
+                                        } catch (error) {
+                                            console.error(error);
+                                            setErrorMessage(
+                                                error.message ||
+                                                    "Unable to create a new random deck."
+                                            );
                                         }
-                                        await refreshStatus();
-                                        setErrorMessage("");
-                                    } catch (error) {
-                                        console.error(error);
-                                        setErrorMessage(
-                                            error.message ||
-                                                "Unable to create a new random deck."
-                                        );
-                                    }
-                                }}
-                                disabled={boardLocked}
-                                title={
-                                    boardLocked
-                                        ? "Close the current board before changing boards."
-                                        : undefined
-                                }
-                            >
-                                <span className="button-icon">🔀</span>
-                                <span className="button-label">
-                                    <span>New Random</span>
-                                    <span>Deck</span>
-                                </span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={nextRandomBoard}
-                                disabled={boardLocked || isRandomDeckComplete}
-                                title={
-                                    boardLocked
-                                        ? "Close the current board before changing boards."
-                                        : isRandomDeckComplete
-                                            ? "The current random deck is complete."
+                                    }}
+                                    disabled={boardLocked}
+                                    title={
+                                        boardLocked
+                                            ? "Close the current board before changing boards."
                                             : undefined
-                                }
-                            >
-                                <span className="button-icon">🎲</span>
-                                <span className="button-label">
-                                    <span>Next</span>
-                                    <span>Random</span>
-                                </span>
-                            </button>
+                                    }
+                                >
+                                    <span className="button-icon">🔀</span>
+                                    <span className="button-label">
+                                        <span>New Random</span>
+                                        <span>Deck</span>
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={nextRandomBoard}
+                                    disabled={boardLocked || isRandomDeckComplete}
+                                    title={
+                                        boardLocked
+                                            ? "Close the current board before changing boards."
+                                            : isRandomDeckComplete
+                                                ? "The current random deck is complete."
+                                                : undefined
+                                    }
+                                >
+                                    <span className="button-icon">🎲</span>
+                                    <span className="button-label">
+                                        <span>Next</span>
+                                        <span>Random</span>
+                                    </span>
+                                </button>
+                            </div>
+
+                            <div className="deck-stats compact-stats">
+                                <div>
+                                    <span>Boards Remaining</span>
+                                    <strong>{randomDeck?.boards_remaining ?? 0}</strong>
+                                </div>
+
+                                <div>
+                                    <span>Boards Played</span>
+                                    <strong>{randomDeck?.boards_played ?? 0}</strong>
+                                </div>
+                            </div>
+
+                            {isRandomDeckComplete && (
+                                <div className="deck-complete-message">
+                                    Random Deck complete. Start a new deck to continue.
+                                </div>
+                            )}
+
+                            <div className="deck-history">
+                                <span>Last 10 Boards</span>
+                                <ul>
+                                    {randomDeck?.last_10_boards?.length ? (
+                                        randomDeck.last_10_boards.map(
+                                            (boardId) => (
+                                                <li key={boardId}>{boardId}</li>
+                                            )
+                                        )
+                                    ) : (
+                                        <li>None yet</li>
+                                    )}
+                                </ul>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="deck-card">
-                        <h3>Random Deck</h3>
+                        <div className="deck-card console-card console-card--wide">
+                            <h3>Event Log</h3>
 
-                        <div className="deck-stats">
-                            <div>
-                                <span>Boards Remaining</span>
-                                <strong>
-                                    {randomDeck?.boards_remaining ?? 0}
-                                </strong>
-                            </div>
-
-                            <div>
-                                <span>Boards Played</span>
-                                <strong>
-                                    {randomDeck?.boards_played ?? 0}
-                                </strong>
-                            </div>
-                        </div>
-
-                        {isRandomDeckComplete && (
-                            <div className="deck-complete-message">
-                                Random Deck complete. Start a new deck to continue.
-                            </div>
-                        )}
-
-                        <div className="deck-history">
-                            <span>Last 10 Boards</span>
-                            <ul>
-                                {randomDeck?.last_10_boards?.length ? (
-                                    randomDeck.last_10_boards.map(
-                                        (boardId) => (
-                                            <li key={boardId}>{boardId}</li>
+                            <div className="event-log compact-event-log">
+                                {gameStatus?.event_log?.length ? (
+                                    gameStatus.event_log.map(
+                                        (event, index) => (
+                                            <div key={`${event}-${index}`}>
+                                                {event}
+                                            </div>
                                         )
                                     )
                                 ) : (
-                                    <li>None yet</li>
+                                    <div>No events.</div>
                                 )}
-                            </ul>
+                            </div>
                         </div>
-                    </div>
 
-                    <hr />
-
-                    <h3>Live Event Log</h3>
-
-                    <div className="event-log">
-                        {gameStatus?.event_log?.length ? (
-                            gameStatus.event_log.map(
-                                (event, index) => (
-                                    <div key={`${event}-${index}`}>
-                                        {event}
-                                    </div>
-                                )
-                            )
-                        ) : (
-                            <div>No events.</div>
-                        )}
                     </div>
                 </section>
             </div>
