@@ -317,6 +317,38 @@ def _ensure_unique_name(
         )
 
 
+def _validate_family_feud(item_id: str) -> tuple[bool, str]:
+    """Validate a Family Feud board ID."""
+
+    session = get_session()
+
+    try:
+        statement = select(FamilyFeudBoard.id).where(
+            FamilyFeudBoard.board_id == item_id
+        )
+        board = session.scalar(statement)
+
+        if board is None:
+            return (False, "Board not found")
+
+        return (True, "OK")
+
+    finally:
+        close_session(session)
+
+
+def validate_item(
+    engine: str,
+    item_id: str,
+) -> tuple[bool, str]:
+    """Validate one item by engine."""
+
+    if engine == "family_feud":
+        return _validate_family_feud(item_id)
+
+    return (False, "Validation not yet implemented")
+
+
 def validate_items(
     items: Iterable[dict[str, Any]] | None = None,
     *,
@@ -325,7 +357,7 @@ def validate_items(
     """
     Validate item IDs against currently supported engines.
 
-    family_feud item IDs are validated against the board library.
+    Returns aggregate and per-item validation details.
     """
 
     normalized = _normalize_items(items, board_ids=board_ids)
@@ -339,40 +371,42 @@ def validate_items(
             "items": [],
         }
 
-    family_feud_ids = [
-        item["item_id"]
-        for item in normalized
-        if item["engine"] == "family_feud"
-    ]
+    validated_items: list[dict[str, Any]] = []
+    missing_ids: list[str] = []
 
-    session = get_session()
+    for item in normalized:
+        is_valid, message = validate_item(
+            item["engine"],
+            item["item_id"],
+        )
 
-    try:
-        known_family_feud_ids: set[str] = set()
-
-        if family_feud_ids:
-            statement = select(FamilyFeudBoard.board_id).where(
-                FamilyFeudBoard.board_id.in_(family_feud_ids)
-            )
-            known_family_feud_ids = set(session.scalars(statement).all())
-
-        missing_ids = [
-            item["item_id"]
-            for item in normalized
-            if item["engine"] == "family_feud"
-            and item["item_id"] not in known_family_feud_ids
-        ]
-
-        return {
-            "valid": not missing_ids,
-            "requested_count": len(normalized),
-            "found_count": len(normalized) - len(missing_ids),
-            "missing_ids": missing_ids,
-            "items": normalized,
+        validated_item = {
+            "sequence": item["sequence"],
+            "engine": item["engine"],
+            "item_id": item["item_id"],
+            "valid": is_valid,
+            "message": message,
         }
+        validated_items.append(validated_item)
 
-    finally:
-        close_session(session)
+        if (
+            not is_valid
+            and item["engine"] == "family_feud"
+            and message == "Board not found"
+        ):
+            missing_ids.append(item["item_id"])
+
+    found_count = sum(
+        1 for item in validated_items if item["valid"]
+    )
+
+    return {
+        "valid": found_count == len(validated_items),
+        "requested_count": len(validated_items),
+        "found_count": found_count,
+        "missing_ids": missing_ids,
+        "items": validated_items,
+    }
 
 
 def validate_board_ids(
