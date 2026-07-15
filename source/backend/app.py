@@ -51,7 +51,7 @@ from source.backend.database import engine
 # Register all SQLAlchemy models before create_all() runs.
 import source.backend.familyfeud_models
 import source.backend.models
-
+import source.backend.production_models
 
 # ----------------------------------------------------------
 # Project Paths
