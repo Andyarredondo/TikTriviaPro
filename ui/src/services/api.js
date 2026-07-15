@@ -38,6 +38,14 @@ async function request(url, options = {}) {
 
 export const api = {
 
+    gameEngines: {
+
+        list() {
+            return request("/api/game-engines");
+        },
+
+    },
+
     contestants: {
 
         async list() {
@@ -72,7 +80,37 @@ export const api = {
             });
         },
     },
+productions: {
 
+    list() {
+        return request("/api/productions");
+    },
+
+    get(productionId) {
+        return request(`/api/productions/${productionId}`);
+    },
+
+    create(data) {
+        return request("/api/productions", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    },
+
+    update(productionId, data) {
+        return request(`/api/productions/${productionId}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        });
+    },
+
+    remove(productionId) {
+        return request(`/api/productions/${productionId}`, {
+            method: "DELETE",
+        });
+    },
+
+},
     familyFeud: {
 
         current() {
