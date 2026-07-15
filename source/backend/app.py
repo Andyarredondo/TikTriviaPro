@@ -44,6 +44,7 @@ from fastapi.templating import Jinja2Templates
 from source.api.contestants import router as contestant_router
 from source.api.familyfeud import router as familyfeud_router
 from source.api.questions import router as question_router
+from source.api.productions import router as production_router
 from source.backend.config import load_settings
 from source.backend.database import Base
 from source.backend.database import engine
@@ -154,6 +155,7 @@ app.add_middleware(
 app.include_router(contestant_router)
 app.include_router(question_router)
 app.include_router(familyfeud_router)
+app.include_router(production_router)
 
 
 # ----------------------------------------------------------
