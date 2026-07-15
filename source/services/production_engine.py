@@ -41,8 +41,8 @@ class ProductionError(ValueError):
     """Raised when a production operation cannot be completed."""
 
 
-def _load_supported_engines() -> set[str]:
-    """Load enabled production engines from source/config/game_engines.json."""
+def _load_game_engines() -> list[dict[str, Any]]:
+    """Load all configured engines from source/config/game_engines.json."""
 
     config_path = (
         Path(__file__).resolve().parents[1]
@@ -74,22 +74,45 @@ def _load_supported_engines() -> set[str]:
             "Game engine configuration must define an 'engines' list."
         )
 
+    normalized_engines: list[dict[str, Any]] = []
+
+    for index, engine in enumerate(engines, start=1):
+        if not isinstance(engine, dict):
+            raise ProductionError(
+                "Game engine configuration contains an invalid engine "
+                f"entry at position {index}."
+            )
+
+        normalized_engines.append(dict(engine))
+
+    return normalized_engines
+
+
+_GAME_ENGINES = _load_game_engines()
+
+
+def get_game_engines() -> list[dict[str, Any]]:
+    """Return every configured game engine."""
+
+    return [dict(engine) for engine in _GAME_ENGINES]
+
+
+def get_supported_engines() -> list[str]:
+    """Return enabled engine IDs from the loaded configuration."""
+
     supported_engines: set[str] = set()
 
-    for engine in engines:
-        if not isinstance(engine, dict):
-            continue
-
+    for engine in _GAME_ENGINES:
         if engine.get("enabled") is True:
             engine_id = str(engine.get("id") or "").strip().lower().replace(" ", "_")
 
             if engine_id:
                 supported_engines.add(engine_id)
 
-    return supported_engines
+    return sorted(supported_engines)
 
 
-SUPPORTED_ENGINES = _load_supported_engines()
+SUPPORTED_ENGINES = set(get_supported_engines())
 
 
 def _clean_text(value: str | None) -> str:
