@@ -19,9 +19,7 @@ This module contains no FastAPI or React code.
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Iterable
 
 from sqlalchemy import select
@@ -32,6 +30,9 @@ from source.backend.production_models import Production
 from source.backend.production_models import ProductionBoard
 from source.backend.session import close_session
 from source.backend.session import get_session
+from source.services.game_engine_registry import get_enabled_engines
+from source.services.game_engine_registry import get_engines
+from source.services.game_dispatcher import dispatch_item
 
 
 VALID_STATUSES = {"Draft", "Ready", "Archived"}
@@ -46,54 +47,7 @@ class ProductionError(ValueError):
     """Raised when a production operation cannot be completed."""
 
 
-def _load_game_engines() -> list[dict[str, Any]]:
-    """Load all configured engines from source/config/game_engines.json."""
-
-    config_path = (
-        Path(__file__).resolve().parents[1]
-        / "config"
-        / "game_engines.json"
-    )
-
-    if not config_path.exists():
-        raise ProductionError(
-            f"Game engine configuration file is missing: {config_path}"
-        )
-
-    try:
-        with config_path.open("r", encoding="utf-8") as file:
-            payload = json.load(file)
-    except json.JSONDecodeError as error:
-        raise ProductionError(
-            f"Game engine configuration is invalid JSON: {config_path}"
-        ) from error
-    except OSError as error:
-        raise ProductionError(
-            f"Unable to read game engine configuration: {config_path}"
-        ) from error
-
-    engines = payload.get("engines")
-
-    if not isinstance(engines, list):
-        raise ProductionError(
-            "Game engine configuration must define an 'engines' list."
-        )
-
-    normalized_engines: list[dict[str, Any]] = []
-
-    for index, engine in enumerate(engines, start=1):
-        if not isinstance(engine, dict):
-            raise ProductionError(
-                "Game engine configuration contains an invalid engine "
-                f"entry at position {index}."
-            )
-
-        normalized_engines.append(dict(engine))
-
-    return normalized_engines
-
-
-_GAME_ENGINES = _load_game_engines()
+_GAME_ENGINES = get_engines()
 
 
 def get_game_engines() -> list[dict[str, Any]]:
@@ -107,12 +61,11 @@ def get_supported_engines() -> list[str]:
 
     supported_engines: set[str] = set()
 
-    for engine in _GAME_ENGINES:
-        if engine.get("enabled") is True:
-            engine_id = str(engine.get("id") or "").strip().lower().replace(" ", "_")
+    for engine in get_enabled_engines():
+        engine_id = str(engine.get("id") or "").strip().lower().replace(" ", "_")
 
-            if engine_id:
-                supported_engines.add(engine_id)
+        if engine_id:
+            supported_engines.add(engine_id)
 
     return sorted(supported_engines)
 
@@ -943,6 +896,24 @@ def _build_playback_payload(
     }
 
 
+def _build_playback_response(
+    production: dict[str, Any],
+    current_index: int,
+) -> dict[str, Any]:
+    """Build playback state and dispatch the active item."""
+
+    payload = _build_playback_payload(production, current_index)
+    current_item = payload.get("current_item") or {}
+
+    dispatch = dispatch_item(
+        current_item.get("engine", ""),
+        current_item.get("item_id", ""),
+    )
+
+    payload["dispatch"] = dispatch
+    return payload
+
+
 def start_production(
     production_id: int,
 ) -> dict[str, Any]:
@@ -953,11 +924,11 @@ def start_production(
     _PLAYBACK_STATE["active_production_id"] = production_id
     _PLAYBACK_STATE["current_index"] = 0
 
-    return _build_playback_payload(production, 0)
+    return _build_playback_response(production, 0)
 
 
 def current_item() -> dict[str, Any]:
-    """Return the current playback item and progress metadata."""
+    """Return the current playback item and dispatch the active game."""
 
     production_id = _PLAYBACK_STATE["active_production_id"]
 
@@ -967,7 +938,11 @@ def current_item() -> dict[str, Any]:
     production = get_production(production_id)
     current_index = int(_PLAYBACK_STATE["current_index"])
 
-    payload = _build_playback_payload(production, current_index)
+    payload = _build_playback_response(
+        production,
+        current_index,
+    )
+
     _PLAYBACK_STATE["current_index"] = payload["current_index"]
 
     return payload
@@ -984,7 +959,17 @@ def next_item() -> dict[str, Any]:
     if current_index < item_count - 1:
         _PLAYBACK_STATE["current_index"] = current_index + 1
 
-    return current_item()
+    production_id = _PLAYBACK_STATE["active_production_id"]
+
+    if production_id is None:
+        raise ProductionError("No active production.")
+
+    production = get_production(production_id)
+
+    return _build_playback_response(
+        production,
+        int(_PLAYBACK_STATE["current_index"]),
+    )
 
 
 def previous_item() -> dict[str, Any]:
@@ -997,7 +982,17 @@ def previous_item() -> dict[str, Any]:
     if current_index > 0:
         _PLAYBACK_STATE["current_index"] = current_index - 1
 
-    return current_item()
+    production_id = _PLAYBACK_STATE["active_production_id"]
+
+    if production_id is None:
+        raise ProductionError("No active production.")
+
+    production = get_production(production_id)
+
+    return _build_playback_response(
+        production,
+        int(_PLAYBACK_STATE["current_index"]),
+    )
 
 
 def end_production() -> dict[str, Any]:

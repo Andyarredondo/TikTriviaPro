@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from source.services.game_engine_registry import get_engine_display_name
 from source.services.familyfeud_game_service import current_board
 from source.services.familyfeud_game_service import load_board
 
@@ -31,6 +32,7 @@ def _activate_family_feud(item_id: str) -> dict[str, Any]:
     """Load and activate a Family Feud board."""
 
     normalized_item_id = (item_id or "").strip()
+    display_name = get_engine_display_name("family_feud")
 
     try:
         board = load_board(normalized_item_id)
@@ -47,7 +49,7 @@ def _activate_family_feud(item_id: str) -> dict[str, Any]:
     if not is_active:
         return {
             "engine": "family_feud",
-            "display_name": "Friendly Feud",
+            "display_name": display_name,
             "item_id": normalized_item_id,
             "loaded": False,
             "active": False,
@@ -56,11 +58,11 @@ def _activate_family_feud(item_id: str) -> dict[str, Any]:
 
     return {
         "engine": "family_feud",
-        "display_name": "Friendly Feud",
+        "display_name": display_name,
         "item_id": normalized_item_id,
         "loaded": True,
         "active": True,
-        "message": "Friendly Feud ready",
+        "message": f"{display_name} ready",
     }
 
 
@@ -75,7 +77,7 @@ def dispatch_item(engine: str, item_id: str) -> dict[str, Any]:
 
     return {
         "engine": "unknown",
-        "display_name": "Unknown",
+        "display_name": get_engine_display_name("unknown"),
         "item_id": normalized_item_id,
         "loaded": False,
         "active": False,
