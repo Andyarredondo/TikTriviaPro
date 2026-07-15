@@ -14,14 +14,15 @@ function makeEmptyValidation() {
   return Array.from({ length: ROW_COUNT }, () => null);
 }
 
-export default function ProductionManager() {
+export default function ProductionManager({
+    selectedProduction,
+    setSelectedProduction,
+}) {
   const [productions, setProductions] = useState([]);
   const [gameEngines, setGameEngines] = useState([]);
   const [isLoadingEngines, setIsLoadingEngines] = useState(true);
   const [engineErrorMessage, setEngineErrorMessage] = useState("");
   const [defaultEngineId, setDefaultEngineId] = useState("");
-  const [selectedProductionId, setSelectedProductionId] =
-    useState("");
   const [loadedProductionId, setLoadedProductionId] =
     useState("");
   const [productionName, setProductionName] = useState("");
@@ -37,6 +38,7 @@ export default function ProductionManager() {
     setItems(makeEmptyRows(defaultEngineId));
     setValidationState(makeEmptyValidation());
     setLoadedProductionId("");
+    setSelectedProduction(null);
   }, [defaultEngineId]);
 
   const buildEditorItems = useCallback((incomingItems) => {
@@ -60,12 +62,12 @@ export default function ProductionManager() {
       : [];
     const productionId = String(production?.id || "");
 
+    setSelectedProduction(production);
     setProductionName(production?.production_name || "");
     setItems(buildEditorItems(incomingItems));
     setValidationState(makeEmptyValidation());
-    setSelectedProductionId(productionId);
     setLoadedProductionId(productionId);
-  }, [buildEditorItems]);
+  }, [buildEditorItems, setSelectedProduction]);
 
   const loadProductionById = useCallback(async (productionId) => {
     const production = await api.productions.get(productionId);
@@ -188,25 +190,24 @@ export default function ProductionManager() {
 
     try {
       if (loadedProductionId) {
-        await api.productions.update(loadedProductionId, {
+        const updatedProduction = await api.productions.update(loadedProductionId, {
           production_name: name,
           items: cleanedItems,
         });
 
         await refreshProductions();
-        await loadProductionById(loadedProductionId);
+        await loadProductionById(updatedProduction?.id || loadedProductionId);
       } else {
-        const created = await api.productions.create({
+        const createdProduction = await api.productions.create({
           production_name: name,
           items: cleanedItems,
         });
 
-        const createdId = String(created?.id || "");
-
         await refreshProductions();
 
-        if (createdId) {
-          await loadProductionById(createdId);
+        if (createdProduction?.id) {
+          await loadProductionById(createdProduction.id);
+          setSelectedProduction(createdProduction);
         }
       }
 
@@ -219,10 +220,10 @@ export default function ProductionManager() {
     } finally {
       setIsWorking(false);
     }
-  }, [defaultEngineId, items, loadedProductionId, loadProductionById, productionName, refreshProductions]);
+  }, [defaultEngineId, items, loadedProductionId, loadProductionById, productionName, refreshProductions, setSelectedProduction]);
 
   const onLoad = useCallback(async () => {
-    if (!selectedProductionId) {
+    if (!selectedProduction?.id) {
       setErrorMessage("Select a production to load.");
       return;
     }
@@ -230,7 +231,15 @@ export default function ProductionManager() {
     setIsWorking(true);
 
     try {
-      await loadProductionById(selectedProductionId);
+      const production = productions.find((entry) => String(entry.id) === String(selectedProduction.id));
+
+      if (!production) {
+        setErrorMessage("Select a production to load.");
+        return;
+      }
+
+      setSelectedProduction(production);
+      await loadProductionById(production.id);
       setErrorMessage("");
     } catch (error) {
       console.error(error);
@@ -240,10 +249,10 @@ export default function ProductionManager() {
     } finally {
       setIsWorking(false);
     }
-  }, [loadProductionById, selectedProductionId]);
+  }, [loadProductionById, productions, selectedProduction, setSelectedProduction]);
 
   const onDelete = useCallback(async () => {
-    if (!selectedProductionId) {
+    if (!selectedProduction?.id) {
       setErrorMessage("Select a production to delete.");
       return;
     }
@@ -259,9 +268,9 @@ export default function ProductionManager() {
     setIsWorking(true);
 
     try {
-      await api.productions.remove(selectedProductionId);
+      await api.productions.remove(selectedProduction.id);
       await refreshProductions();
-      setSelectedProductionId("");
+      setSelectedProduction(null);
       clearEditor();
       setErrorMessage("");
     } catch (error) {
@@ -272,7 +281,7 @@ export default function ProductionManager() {
     } finally {
       setIsWorking(false);
     }
-  }, [clearEditor, refreshProductions, selectedProductionId]);
+  }, [clearEditor, refreshProductions, selectedProduction, setSelectedProduction]);
 
   return (
     <div className="deck-card production-manager">
@@ -317,9 +326,13 @@ export default function ProductionManager() {
 
         <select
           id="saved-productions"
-          value={selectedProductionId}
+          value={selectedProduction?.id || ""}
           onChange={(event) => {
-            setSelectedProductionId(event.target.value);
+            const nextSelected = productions.find(
+              (production) => String(production.id) === String(event.target.value)
+            ) || null;
+
+            setSelectedProduction(nextSelected);
             setLoadedProductionId("");
           }}
           disabled={isWorking}
@@ -429,7 +442,7 @@ export default function ProductionManager() {
         <button
           type="button"
           onClick={onLoad}
-          disabled={isWorking || !selectedProductionId}
+          disabled={isWorking || !selectedProduction?.id}
         >
           Load
         </button>
@@ -437,7 +450,7 @@ export default function ProductionManager() {
         <button
           type="button"
           onClick={onDelete}
-          disabled={isWorking || !selectedProductionId}
+          disabled={isWorking || !selectedProduction?.id}
         >
           Delete
         </button>

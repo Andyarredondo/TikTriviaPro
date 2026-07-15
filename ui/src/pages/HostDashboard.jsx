@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../services/api";
+import ProductionManager from "../components/ProductionManager";
 
 const HIDDEN = "████████████████";
 
@@ -10,8 +11,11 @@ export default function HostDashboard() {
     const [randomDeck, setRandomDeck] = useState(null);
     const [boardSource, setBoardSource] = useState("Entire Database");
     const [selectedCategory, setSelectedCategory] = useState("");
+    const [productionPlayback, setProductionPlayback] = useState(null);
+    const [playbackBusy, setPlaybackBusy] = useState(false);
     const [categories, setCategories] = useState([]);
     const [errorMessage, setErrorMessage] = useState("");
+    const [selectedProduction, setSelectedProduction] = useState(null);
 
     const refreshStatus = useCallback(async () => {
         try {
@@ -44,7 +48,6 @@ export default function HostDashboard() {
             setErrorMessage(error.message || "Unable to load contestants.");
         }
     }, []);
-
     const loadBoard = useCallback(
         async (loader) => {
             try {
@@ -84,6 +87,7 @@ export default function HostDashboard() {
             }
 
             refreshContestants();
+            await refreshProductionPlaybackCurrent();
             loadBoard(api.familyFeud.nextBoard);
         };
 
@@ -132,6 +136,128 @@ export default function HostDashboard() {
     const isRandomDeckComplete =
         (randomDeck?.total_boards ?? 0) > 0 &&
         (randomDeck?.boards_remaining ?? 0) === 0;
+
+    const isProductionSource = boardSource === "Production";
+    const hasActiveProductionPlayback = Boolean(
+        productionPlayback?.production_id
+    );
+
+    const playbackProductionName =
+        productionPlayback?.production_name || "No active production";
+
+    const playbackCurrentItem = productionPlayback?.current_item || null;
+
+    const playbackProgressText =
+        productionPlayback?.item_count != null
+            ? `${productionPlayback.current_index + 1} / ${productionPlayback.item_count}`
+            : "-";
+
+    const playbackEngineText = playbackCurrentItem?.engine
+        ? playbackCurrentItem.engine
+              .split("_")
+              .map((segment) =>
+                  segment
+                      ? segment.charAt(0).toUpperCase() + segment.slice(1)
+                      : segment
+              )
+              .join(" ")
+        : "-";
+
+    const playbackItemIdText = playbackCurrentItem?.item_id || "-";
+
+    async function refreshProductionPlaybackCurrent({
+        suppressError = true,
+    } = {}) {
+        try {
+            const current = await api.productionPlayback.current();
+            setProductionPlayback(current);
+        } catch (error) {
+            setProductionPlayback(null);
+
+            if (!suppressError) {
+                console.error(error);
+                setErrorMessage(
+                    error.message || "Unable to load production playback."
+                );
+            }
+        }
+    }
+
+    async function startProductionPlayback() {
+        if (!selectedProduction?.id) {
+            setErrorMessage("Select a production to start.");
+            return;
+        }
+
+        setPlaybackBusy(true);
+
+        try {
+            const playback = await api.productionPlayback.start(
+                selectedProduction?.id
+            );
+
+            setProductionPlayback(playback);
+            setErrorMessage("");
+        } catch (error) {
+            console.error(error);
+            setErrorMessage(
+                error.message || "Unable to start production playback."
+            );
+        } finally {
+            setPlaybackBusy(false);
+        }
+    }
+
+    async function nextProductionPlaybackItem() {
+        setPlaybackBusy(true);
+
+        try {
+            const playback = await api.productionPlayback.next();
+            setProductionPlayback(playback);
+            setErrorMessage("");
+        } catch (error) {
+            console.error(error);
+            setErrorMessage(
+                error.message || "Unable to advance production playback."
+            );
+        } finally {
+            setPlaybackBusy(false);
+        }
+    }
+
+    async function previousProductionPlaybackItem() {
+        setPlaybackBusy(true);
+
+        try {
+            const playback = await api.productionPlayback.previous();
+            setProductionPlayback(playback);
+            setErrorMessage("");
+        } catch (error) {
+            console.error(error);
+            setErrorMessage(
+                error.message || "Unable to move production playback back."
+            );
+        } finally {
+            setPlaybackBusy(false);
+        }
+    }
+
+    async function endProductionPlayback() {
+        setPlaybackBusy(true);
+
+        try {
+            await api.productionPlayback.end();
+            setProductionPlayback(null);
+            setErrorMessage("");
+        } catch (error) {
+            console.error(error);
+            setErrorMessage(
+                error.message || "Unable to end production playback."
+            );
+        } finally {
+            setPlaybackBusy(false);
+        }
+    }
 
     async function openRound() {
         try {
@@ -499,6 +625,21 @@ export default function HostDashboard() {
                                 onChange={async (event) => {
                                     const nextSource = event.target.value;
 
+                                    if (nextSource === "Production") {
+                                        setBoardSource(nextSource);
+                                        setSelectedCategory("");
+                                        await refreshProductionPlaybackCurrent();
+                                        setErrorMessage("");
+                                        return;
+                                    }
+
+                                    if (nextSource === "Random Deck") {
+                                        setBoardSource(nextSource);
+                                        setSelectedCategory("");
+                                        setErrorMessage("");
+                                        return;
+                                    }
+
                                     try {
                                         const updatedSource = await api.familyFeud.setBoardSource(nextSource);
                                         setBoardSource(updatedSource?.board_source || nextSource);
@@ -521,9 +662,8 @@ export default function HostDashboard() {
                             >
                                 <option value="Entire Database">Entire Database</option>
                                 <option value="Category">Category</option>
-                                <option value="Saved Show" disabled>Saved Show (Coming Soon)</option>
-                                <option value="Playlist" disabled>Playlist (Coming Soon)</option>
-                                <option value="Favorites" disabled>Favorites (Coming Soon)</option>
+                                <option value="Production">Production</option>
+                                <option value="Random Deck">Random Deck</option>
                             </select>
                         </div>
                     </div>
@@ -567,6 +707,51 @@ export default function HostDashboard() {
                                         ))
                                     )}
                                 </select>
+                            </div>
+                        </div>
+                    )}
+
+                    {boardSource === "Production" && (
+                        <div className="board-control-group">
+                            <div className="board-control-label">Production Playback</div>
+                            <div className="deck-history">
+                                <span>Selected Production</span>
+                                <strong>
+                                    {selectedProduction?.production_name || "None Selected"}
+                                </strong>
+                            </div>
+
+                            <div className="deck-card">
+                                <h3>Production Playback</h3>
+
+                                <div className="deck-stats">
+                                    <div>
+                                        <span>Current Production</span>
+                                        <strong>{playbackProductionName}</strong>
+                                    </div>
+
+                                    <div>
+                                        <span>Current Item</span>
+                                        <strong>{playbackCurrentItem?.sequence ?? "-"}</strong>
+                                    </div>
+                                </div>
+
+                                <div className="deck-history">
+                                    <span>Progress</span>
+                                    <strong>{playbackProgressText}</strong>
+                                </div>
+
+                                <div className="deck-stats">
+                                    <div>
+                                        <span>Current Engine</span>
+                                        <strong>{playbackEngineText}</strong>
+                                    </div>
+
+                                    <div>
+                                        <span>Current Item ID</span>
+                                        <strong>{playbackItemIdText}</strong>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -633,33 +818,53 @@ export default function HostDashboard() {
                         <div className="board-control-row">
                             <button
                                 type="button"
-                                onClick={() =>
-                                    loadBoard(api.familyFeud.firstBoard)
+                                onClick={
+                                    isProductionSource
+                                        ? startProductionPlayback
+                                        : () => loadBoard(api.familyFeud.firstBoard)
                                 }
-                                disabled={boardLocked}
+                                disabled={
+                                    isProductionSource
+                                        ? playbackBusy || !selectedProduction?.id
+                                        : boardLocked
+                                }
                                 title={
-                                    boardLocked
+                                    isProductionSource
+                                        ? !selectedProduction?.id
+                                            ? "Select a production first."
+                                            : undefined
+                                        : boardLocked
                                         ? "Close the current board before changing boards."
                                         : undefined
                                 }
                             >
-                                <span className="button-icon">⏮</span>
+                                <span className="button-icon">
+                                    {isProductionSource ? "▶" : "⏮"}
+                                </span>
                                 <span className="button-label">
-                                    <span>First</span>
-                                    <span>Board</span>
+                                    <span>{isProductionSource ? "Start" : "First"}</span>
+                                    <span>{isProductionSource ? "Production" : "Board"}</span>
                                 </span>
                             </button>
 
                             <button
                                 type="button"
-                                onClick={() =>
-                                    loadBoard(
-                                        api.familyFeud.previousBoard
-                                    )
+                                onClick={
+                                    isProductionSource
+                                        ? previousProductionPlaybackItem
+                                        : () => loadBoard(api.familyFeud.previousBoard)
                                 }
-                                disabled={boardLocked}
+                                disabled={
+                                    isProductionSource
+                                        ? playbackBusy || !hasActiveProductionPlayback
+                                        : boardLocked
+                                }
                                 title={
-                                    boardLocked
+                                    isProductionSource
+                                        ? !hasActiveProductionPlayback
+                                            ? "Start production playback first."
+                                            : undefined
+                                        : boardLocked
                                         ? "Close the current board before changing boards."
                                         : undefined
                                 }
@@ -667,18 +872,28 @@ export default function HostDashboard() {
                                 <span className="button-icon">◀</span>
                                 <span className="button-label">
                                     <span>Previous</span>
-                                    <span>Board</span>
+                                    <span>{isProductionSource ? "Item" : "Board"}</span>
                                 </span>
                             </button>
 
                             <button
                                 type="button"
-                                onClick={() =>
-                                    loadBoard(api.familyFeud.nextBoard)
+                                onClick={
+                                    isProductionSource
+                                        ? nextProductionPlaybackItem
+                                        : () => loadBoard(api.familyFeud.nextBoard)
                                 }
-                                disabled={boardLocked}
+                                disabled={
+                                    isProductionSource
+                                        ? playbackBusy || !hasActiveProductionPlayback
+                                        : boardLocked
+                                }
                                 title={
-                                    boardLocked
+                                    isProductionSource
+                                        ? !hasActiveProductionPlayback
+                                            ? "Start production playback first."
+                                            : undefined
+                                        : boardLocked
                                         ? "Close the current board before changing boards."
                                         : undefined
                                 }
@@ -686,11 +901,25 @@ export default function HostDashboard() {
                                 <span className="button-icon">▶</span>
                                 <span className="button-label">
                                     <span>Next</span>
-                                    <span>Board</span>
+                                    <span>{isProductionSource ? "Item" : "Board"}</span>
                                 </span>
                             </button>
                         </div>
                     </div>
+
+                    {isProductionSource && (
+                        <button
+                            type="button"
+                            onClick={endProductionPlayback}
+                            disabled={playbackBusy || !hasActiveProductionPlayback}
+                        >
+                            <span className="button-icon">⏹</span>
+                            <span className="button-label">
+                                <span>End</span>
+                                <span>Production</span>
+                            </span>
+                        </button>
+                    )}
 
                     <button
                         type="button"
@@ -715,6 +944,10 @@ export default function HostDashboard() {
                             <span>Round</span>
                         </span>
                     </button>
+                    <ProductionManager
+    selectedProduction={selectedProduction}
+    setSelectedProduction={setSelectedProduction}
+/>      
 
                     <div className="deck-card">
                         <h3>Random Deck</h3>
