@@ -22,11 +22,7 @@ html,body,#root{
 }
 
 body{
-    background:
-      radial-gradient(circle at top,
-      rgba(123,86,216,.12),
-      transparent 40%),
-      linear-gradient(180deg,#181818,#0f0f10);
+    background:transparent;
     color:var(--rrn-ivory);
     font-family:"Segoe UI",Arial,sans-serif;
     overflow:hidden;
@@ -47,38 +43,18 @@ body{
     height:100%;
     display:flex;
     flex-direction:column;
-    border:4px solid var(--rrn-gold);
-    border-radius:22px;
-    background:
-      linear-gradient(180deg,var(--rrn-panel2),var(--rrn-panel));
-    box-shadow:
-      0 0 40px rgba(0,0,0,.55),
-      0 0 18px rgba(212,175,55,.18),
-      inset 0 0 0 2px rgba(255,255,255,.03);
+    background:transparent;
+    border:none;
+    border-radius:0;
+    box-shadow:none;
     position:relative;
-    overflow:hidden;
+    overflow:visible;
     container-type:inline-size;
 }
 
 .broadcast-frame::before,
 .broadcast-frame::after{
-    content:"";
-    position:absolute;
-    width:180px;
-    height:180px;
-    border:2px solid rgba(212,175,55,.35);
-    border-radius:50%;
-    pointer-events:none;
-}
-
-.broadcast-frame::before{
-    top:-90px;
-    left:-90px;
-}
-
-.broadcast-frame::after{
-    bottom:-90px;
-    right:-90px;
+    display:none;
 }
 
 .broadcast-title{
@@ -122,31 +98,45 @@ body{
 .answer-plaque{
     background:
       linear-gradient(180deg,#222,#171717);
+
     border:2px solid var(--rrn-bronze);
-    border-radius:1.5cqw;
+
+    border-radius:1.2cqw;
+
     display:grid;
-    grid-template-columns:8cqw 1fr 9cqw;
+
+    grid-template-columns:
+        7cqw
+        1fr
+        8cqw;
+
     align-items:center;
-    padding:1.5% 2%;
-    gap:1cqw;
+
+    padding:0.9% 1.6%;
+
+    gap:0.8cqw;
 }
 
 .answer-rank{
-    font-size:3.5cqw;
+font-size:3.1cqw;
     font-weight:700;
     color:var(--rrn-gold);
     text-align:center;
 }
 
 .answer-text{
-    font-size:3cqw;
-    letter-spacing:0.3cqw;
+    font-size:2.8cqw;
+
+    line-height:1.08;
+
+    letter-spacing:0.18cqw;
+
     color:var(--rrn-ivory);
+
     word-break:break-word;
 }
-
 .answer-score{
-    font-size:3cqw;
+   font-size:2.8cqw;
     font-weight:700;
     color:var(--rrn-gold);
     text-align:right;
