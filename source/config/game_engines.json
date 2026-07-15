@@ -1,0 +1,34 @@
+{
+    "engines": [
+        {
+            "id": "family_feud",
+            "name": "Family Feud",
+            "enabled": true,
+            "supports_productions": true
+        },
+        {
+            "id": "trivia",
+            "name": "Trivia",
+            "enabled": false,
+            "supports_productions": true
+        },
+        {
+            "id": "name_that_song",
+            "name": "Name That Song",
+            "enabled": false,
+            "supports_productions": true
+        },
+        {
+            "id": "picture_puzzle",
+            "name": "Picture Puzzle",
+            "enabled": false,
+            "supports_productions": true
+        },
+        {
+            "id": "wheel",
+            "name": "Wheel",
+            "enabled": false,
+            "supports_productions": true
+        }
+    ]
+}

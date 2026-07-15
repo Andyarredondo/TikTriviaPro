@@ -2,20 +2,26 @@
 ==========================================================
 TikTrivia Pro
 Production Engine
-Version 0.1.0
+Version 0.2.0
 ==========================================================
 
 Purpose
 -------
 Create, validate, save, load, duplicate, reorder, and delete
-reusable productions made from existing Family Feud board IDs.
+reusable productions made from game items.
+
+Current engine support
+----------------------
+- family_feud
 
 This module contains no FastAPI or React code.
 """
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Iterable
 
 from sqlalchemy import select
@@ -33,6 +39,57 @@ VALID_STATUSES = {"Draft", "Ready", "Archived"}
 
 class ProductionError(ValueError):
     """Raised when a production operation cannot be completed."""
+
+
+def _load_supported_engines() -> set[str]:
+    """Load enabled production engines from source/config/game_engines.json."""
+
+    config_path = (
+        Path(__file__).resolve().parents[1]
+        / "config"
+        / "game_engines.json"
+    )
+
+    if not config_path.exists():
+        raise ProductionError(
+            f"Game engine configuration file is missing: {config_path}"
+        )
+
+    try:
+        with config_path.open("r", encoding="utf-8") as file:
+            payload = json.load(file)
+    except json.JSONDecodeError as error:
+        raise ProductionError(
+            f"Game engine configuration is invalid JSON: {config_path}"
+        ) from error
+    except OSError as error:
+        raise ProductionError(
+            f"Unable to read game engine configuration: {config_path}"
+        ) from error
+
+    engines = payload.get("engines")
+
+    if not isinstance(engines, list):
+        raise ProductionError(
+            "Game engine configuration must define an 'engines' list."
+        )
+
+    supported_engines: set[str] = set()
+
+    for engine in engines:
+        if not isinstance(engine, dict):
+            continue
+
+        if engine.get("enabled") is True:
+            engine_id = str(engine.get("id") or "").strip().lower().replace(" ", "_")
+
+            if engine_id:
+                supported_engines.add(engine_id)
+
+    return supported_engines
+
+
+SUPPORTED_ENGINES = _load_supported_engines()
 
 
 def _clean_text(value: str | None) -> str:
@@ -71,34 +128,116 @@ def _clean_status(value: str | None) -> str:
     return status
 
 
-def _normalize_board_ids(
+def _clean_engine(value: str | None) -> str:
+    """Validate and normalize an item engine key."""
+
+    engine = _clean_text(value).lower().replace(" ", "_")
+
+    if not engine:
+        raise ProductionError("Item engine is required.")
+
+    if engine not in SUPPORTED_ENGINES:
+        allowed = ", ".join(sorted(SUPPORTED_ENGINES))
+        raise ProductionError(
+            f"Unsupported engine '{engine}'. Supported engines: {allowed}."
+        )
+
+    return engine
+
+
+def _legacy_board_ids_to_items(
     board_ids: Iterable[str] | None,
-) -> list[str]:
-    """
-    Normalize board IDs while preserving their supplied order.
+) -> list[dict[str, Any]]:
+    """Convert legacy board_ids into engine-based items."""
 
-    Duplicate IDs are rejected because a manually assembled production
-    should not silently repeat the same board.
-    """
+    items: list[dict[str, Any]] = []
 
-    normalized: list[str] = []
-    seen: set[str] = set()
-
-    for raw_board_id in board_ids or []:
+    for sequence, raw_board_id in enumerate(board_ids or [], start=1):
         board_id = _clean_text(raw_board_id)
 
         if not board_id:
             raise ProductionError("Board IDs cannot be blank.")
 
-        if board_id in seen:
+        items.append(
+            {
+                "sequence": sequence,
+                "engine": "family_feud",
+                "item_id": board_id,
+            }
+        )
+
+    return items
+
+
+def _normalize_items(
+    items: Iterable[dict[str, Any]] | None = None,
+    *,
+    board_ids: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Normalize items while preserving supplied order.
+
+    Backward compatibility:
+    - If items are not supplied, legacy board_ids are converted to items.
+    - Legacy item payloads containing board_id are accepted.
+    """
+
+    source_items = (
+        list(items)
+        if items is not None
+        else _legacy_board_ids_to_items(board_ids)
+    )
+
+    normalized: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for raw_item in source_items:
+        if isinstance(raw_item, str):
+            candidate = {
+                "engine": "family_feud",
+                "item_id": raw_item,
+            }
+        elif isinstance(raw_item, dict):
+            candidate = raw_item
+        else:
+            raise ProductionError("Each item must be an object.")
+
+        engine = _clean_engine(candidate.get("engine", "family_feud"))
+        item_id = _clean_text(
+            candidate.get("item_id") or candidate.get("board_id")
+        )
+
+        if not item_id:
+            raise ProductionError("Item IDs cannot be blank.")
+
+        key = (engine, item_id)
+        if key in seen:
             raise ProductionError(
-                f"Duplicate board ID in production: {board_id}"
+                f"Duplicate item in production: {engine}:{item_id}"
             )
 
-        seen.add(board_id)
-        normalized.append(board_id)
+        seen.add(key)
+
+        normalized.append(
+            {
+                "sequence": len(normalized) + 1,
+                "engine": engine,
+                "item_id": item_id,
+            }
+        )
 
     return normalized
+
+
+def _normalize_board_ids(
+    board_ids: Iterable[str] | None,
+) -> list[str]:
+    """Legacy helper retained for compatibility with board-specific helpers."""
+
+    return [
+        item["item_id"]
+        for item in _normalize_items(board_ids=board_ids)
+    ]
 
 
 def _production_statement():
@@ -155,16 +294,18 @@ def _ensure_unique_name(
         )
 
 
-def validate_board_ids(
-    board_ids: Iterable[str] | None,
+def validate_items(
+    items: Iterable[dict[str, Any]] | None = None,
+    *,
+    board_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """
-    Validate board IDs against the Family Feud board library.
+    Validate item IDs against currently supported engines.
 
-    Returns a structured result that preserves the requested order.
+    family_feud item IDs are validated against the board library.
     """
 
-    normalized = _normalize_board_ids(board_ids)
+    normalized = _normalize_items(items, board_ids=board_ids)
 
     if not normalized:
         return {
@@ -172,56 +313,62 @@ def validate_board_ids(
             "requested_count": 0,
             "found_count": 0,
             "missing_ids": [],
-            "boards": [],
+            "items": [],
         }
+
+    family_feud_ids = [
+        item["item_id"]
+        for item in normalized
+        if item["engine"] == "family_feud"
+    ]
 
     session = get_session()
 
     try:
-        statement = select(FamilyFeudBoard).where(
-            FamilyFeudBoard.board_id.in_(normalized)
-        )
+        known_family_feud_ids: set[str] = set()
 
-        rows = list(session.scalars(statement).all())
-        by_id = {board.board_id: board for board in rows}
+        if family_feud_ids:
+            statement = select(FamilyFeudBoard.board_id).where(
+                FamilyFeudBoard.board_id.in_(family_feud_ids)
+            )
+            known_family_feud_ids = set(session.scalars(statement).all())
 
         missing_ids = [
-            board_id
-            for board_id in normalized
-            if board_id not in by_id
-        ]
-
-        boards = [
-            {
-                "board_id": board_id,
-                "category": by_id[board_id].category,
-                "difficulty": by_id[board_id].difficulty,
-                "survey_question": by_id[board_id].survey_question,
-                "active": by_id[board_id].active,
-            }
-            for board_id in normalized
-            if board_id in by_id
+            item["item_id"]
+            for item in normalized
+            if item["engine"] == "family_feud"
+            and item["item_id"] not in known_family_feud_ids
         ]
 
         return {
             "valid": not missing_ids,
             "requested_count": len(normalized),
-            "found_count": len(boards),
+            "found_count": len(normalized) - len(missing_ids),
             "missing_ids": missing_ids,
-            "boards": boards,
+            "items": normalized,
         }
 
     finally:
         close_session(session)
 
 
-def _validated_board_ids(
+def validate_board_ids(
     board_ids: Iterable[str] | None,
-) -> list[str]:
-    """Return normalized board IDs or raise when any ID is invalid."""
+) -> dict[str, Any]:
+    """Legacy board-id validation wrapper."""
 
-    normalized = _normalize_board_ids(board_ids)
-    result = validate_board_ids(normalized)
+    return validate_items(board_ids=board_ids)
+
+
+def _validated_items(
+    items: Iterable[dict[str, Any]] | None = None,
+    *,
+    board_ids: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Return normalized items or raise when any item is invalid."""
+
+    normalized = _normalize_items(items, board_ids=board_ids)
+    result = validate_items(normalized)
 
     if not result["valid"]:
         missing = ", ".join(result["missing_ids"])
@@ -232,15 +379,47 @@ def _validated_board_ids(
     return normalized
 
 
-def production_to_dict(
+def _validated_board_ids(
+    board_ids: Iterable[str] | None,
+) -> list[str]:
+    """Legacy board-id validator wrapper."""
+
+    items = _validated_items(board_ids=board_ids)
+    return [item["item_id"] for item in items]
+
+
+def _rows_to_items(
     production: Production,
-) -> dict[str, Any]:
-    """Convert an eager-loaded Production model into API-safe data."""
+) -> list[dict[str, Any]]:
+    """
+    Convert persisted rows into generic items.
+
+    Backward compatibility:
+    Existing rows only store board_id, so they are loaded as
+    family_feud items automatically.
+    """
 
     ordered_boards = sorted(
         production.boards,
         key=lambda item: item.sequence,
     )
+
+    return [
+        {
+            "sequence": item.sequence,
+            "engine": "family_feud",
+            "item_id": item.board_id,
+        }
+        for item in ordered_boards
+    ]
+
+
+def production_to_dict(
+    production: Production,
+) -> dict[str, Any]:
+    """Convert an eager-loaded Production model into API-safe data."""
+
+    items = _rows_to_items(production)
 
     return {
         "id": production.id,
@@ -259,35 +438,28 @@ def production_to_dict(
         "status": production.status,
         "notes": production.notes,
         "tags": production.tags,
-        "board_count": len(ordered_boards),
-        "board_ids": [
-            item.board_id
-            for item in ordered_boards
-        ],
-        "boards": [
-            {
-                "id": item.id,
-                "sequence": item.sequence,
-                "board_id": item.board_id,
-            }
-            for item in ordered_boards
-        ],
+        "item_count": len(items),
+        "items": items,
     }
 
 
 def create_production(
     production_name: str,
-    board_ids: Iterable[str] | None = None,
+    items: Iterable[dict[str, Any]] | None = None,
     *,
     description: str = "",
     status: str = "Draft",
     notes: str = "",
     tags: str = "",
+    board_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Create and persist a new production."""
 
     name = _clean_name(production_name)
-    normalized_ids = _validated_board_ids(board_ids)
+    normalized_items = _validated_items(
+        items,
+        board_ids=board_ids,
+    )
     normalized_status = _clean_status(status)
 
     session = get_session()
@@ -307,13 +479,10 @@ def create_production(
 
         production.boards = [
             ProductionBoard(
-                sequence=index,
-                board_id=board_id,
+                sequence=item["sequence"],
+                board_id=item["item_id"],
             )
-            for index, board_id in enumerate(
-                normalized_ids,
-                start=1,
-            )
+            for item in normalized_items
         ]
 
         session.add(production)
@@ -395,19 +564,21 @@ def update_production(
     status: str | None = None,
     notes: str | None = None,
     tags: str | None = None,
+    items: Iterable[dict[str, Any]] | None = None,
     board_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """
-    Update production metadata and optionally replace its ordered boards.
+    Update production metadata and optionally replace its ordered items.
 
     Omitted fields remain unchanged.
     """
 
-    normalized_ids = (
-        _validated_board_ids(board_ids)
-        if board_ids is not None
-        else None
-    )
+    normalized_items = None
+    if items is not None or board_ids is not None:
+        normalized_items = _validated_items(
+            items,
+            board_ids=board_ids,
+        )
 
     session = get_session()
 
@@ -438,17 +609,14 @@ def update_production(
         if tags is not None:
             production.tags = _clean_text(tags)
 
-        if normalized_ids is not None:
+        if normalized_items is not None:
             production.boards.clear()
             production.boards.extend(
                 ProductionBoard(
-                    sequence=index,
-                    board_id=board_id,
+                    sequence=item["sequence"],
+                    board_id=item["item_id"],
                 )
-                for index, board_id in enumerate(
-                    normalized_ids,
-                    start=1,
-                )
+                for item in normalized_items
             )
 
         production.modified = datetime.utcnow()
@@ -473,7 +641,7 @@ def update_production(
 def delete_production(
     production_id: int,
 ) -> dict[str, Any]:
-    """Delete one production and its ordered board references."""
+    """Delete one production and its ordered item references."""
 
     session = get_session()
 
@@ -508,7 +676,7 @@ def duplicate_production(
 
     return create_production(
         production_name=new_name,
-        board_ids=source["board_ids"],
+        items=source["items"],
         description=source["description"],
         status="Draft",
         notes=source["notes"],
@@ -522,31 +690,43 @@ def add_board(
     *,
     position: int | None = None,
 ) -> dict[str, Any]:
-    """Add one validated board to a production."""
+    """Legacy helper: add one Family Feud board item to a production."""
 
     production = get_production(production_id)
-    board_ids = list(production["board_ids"])
-    normalized_board_id = _validated_board_ids([board_id])[0]
+    items = list(production["items"])
+    normalized_item = _validated_items(
+        [{"engine": "family_feud", "item_id": board_id}]
+    )[0]
 
-    if normalized_board_id in board_ids:
+    duplicate = next(
+        (
+            item
+            for item in items
+            if item["engine"] == "family_feud"
+            and item["item_id"] == normalized_item["item_id"]
+        ),
+        None,
+    )
+
+    if duplicate is not None:
         raise ProductionError(
-            f"Board {normalized_board_id} is already in this production."
+            f"Board {normalized_item['item_id']} is already in this production."
         )
 
     if position is None:
-        board_ids.append(normalized_board_id)
+        items.append(normalized_item)
     else:
-        if position < 1 or position > len(board_ids) + 1:
+        if position < 1 or position > len(items) + 1:
             raise ProductionError(
                 "Position must be between 1 and "
-                f"{len(board_ids) + 1}."
+                f"{len(items) + 1}."
             )
 
-        board_ids.insert(position - 1, normalized_board_id)
+        items.insert(position - 1, normalized_item)
 
     return update_production(
         production_id,
-        board_ids=board_ids,
+        items=items,
     )
 
 
@@ -556,7 +736,7 @@ def remove_board(
     sequence: int | None = None,
     board_id: str | None = None,
 ) -> dict[str, Any]:
-    """Remove one board by sequence number or board ID."""
+    """Legacy helper: remove one Family Feud board item by sequence or ID."""
 
     if sequence is None and board_id is None:
         raise ProductionError(
@@ -564,29 +744,39 @@ def remove_board(
         )
 
     production = get_production(production_id)
-    board_ids = list(production["board_ids"])
+    items = list(production["items"])
 
     if sequence is not None:
-        if sequence < 1 or sequence > len(board_ids):
+        if sequence < 1 or sequence > len(items):
             raise ProductionError(
-                f"Sequence must be between 1 and {len(board_ids)}."
+                f"Sequence must be between 1 and {len(items)}."
             )
 
-        del board_ids[sequence - 1]
+        del items[sequence - 1]
 
     else:
         normalized_board_id = _clean_text(board_id)
 
-        if normalized_board_id not in board_ids:
+        target_index = next(
+            (
+                index
+                for index, item in enumerate(items)
+                if item["engine"] == "family_feud"
+                and item["item_id"] == normalized_board_id
+            ),
+            None,
+        )
+
+        if target_index is None:
             raise ProductionError(
                 f"Board {normalized_board_id} is not in this production."
             )
 
-        board_ids.remove(normalized_board_id)
+        del items[target_index]
 
     return update_production(
         production_id,
-        board_ids=board_ids,
+        items=items,
     )
 
 
@@ -595,28 +785,28 @@ def move_board(
     from_sequence: int,
     to_sequence: int,
 ) -> dict[str, Any]:
-    """Move one board to a new 1-based sequence position."""
+    """Legacy helper: move one item to a new 1-based sequence position."""
 
     production = get_production(production_id)
-    board_ids = list(production["board_ids"])
-    board_count = len(board_ids)
+    items = list(production["items"])
+    item_count = len(items)
 
-    if from_sequence < 1 or from_sequence > board_count:
+    if from_sequence < 1 or from_sequence > item_count:
         raise ProductionError(
-            f"from_sequence must be between 1 and {board_count}."
+            f"from_sequence must be between 1 and {item_count}."
         )
 
-    if to_sequence < 1 or to_sequence > board_count:
+    if to_sequence < 1 or to_sequence > item_count:
         raise ProductionError(
-            f"to_sequence must be between 1 and {board_count}."
+            f"to_sequence must be between 1 and {item_count}."
         )
 
-    item = board_ids.pop(from_sequence - 1)
-    board_ids.insert(to_sequence - 1, item)
+    item = items.pop(from_sequence - 1)
+    items.insert(to_sequence - 1, item)
 
     return update_production(
         production_id,
-        board_ids=board_ids,
+        items=items,
     )
 
 
@@ -624,7 +814,7 @@ def move_board_up(
     production_id: int,
     sequence: int,
 ) -> dict[str, Any]:
-    """Move one board up by one position."""
+    """Legacy helper: move one item up by one position."""
 
     if sequence <= 1:
         return get_production(production_id)
@@ -640,12 +830,12 @@ def move_board_down(
     production_id: int,
     sequence: int,
 ) -> dict[str, Any]:
-    """Move one board down by one position."""
+    """Legacy helper: move one item down by one position."""
 
     production = get_production(production_id)
-    board_count = production["board_count"]
+    item_count = production["item_count"]
 
-    if sequence >= board_count:
+    if sequence >= item_count:
         return production
 
     return move_board(
