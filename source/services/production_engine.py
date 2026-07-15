@@ -36,6 +36,11 @@ from source.backend.session import get_session
 
 VALID_STATUSES = {"Draft", "Ready", "Archived"}
 
+_PLAYBACK_STATE = {
+    "active_production_id": None,
+    "current_index": 0,
+}
+
 
 class ProductionError(ValueError):
     """Raised when a production operation cannot be completed."""
@@ -900,3 +905,112 @@ def move_board_down(
         sequence,
         sequence + 1,
     )
+
+
+def _build_playback_payload(
+    production: dict[str, Any],
+    current_index: int,
+) -> dict[str, Any]:
+    """Build a normalized playback payload for API responses."""
+
+    items = production.get("items") or []
+    item_count = len(items)
+
+    if item_count == 0:
+        raise ProductionError(
+            "Production has no items to play."
+        )
+
+    if current_index < 0:
+        current_index = 0
+
+    if current_index >= item_count:
+        current_index = item_count - 1
+
+    current = items[current_index]
+
+    return {
+        "production_id": production.get("id"),
+        "production_name": production.get("production_name"),
+        "current_index": current_index,
+        "item_count": item_count,
+        "remaining": max(item_count - (current_index + 1), 0),
+        "current_item": {
+            "sequence": current.get("sequence"),
+            "engine": current.get("engine"),
+            "item_id": current.get("item_id"),
+        },
+    }
+
+
+def start_production(
+    production_id: int,
+) -> dict[str, Any]:
+    """Start playback for a production and position at the first item."""
+
+    production = get_production(production_id)
+
+    _PLAYBACK_STATE["active_production_id"] = production_id
+    _PLAYBACK_STATE["current_index"] = 0
+
+    return _build_playback_payload(production, 0)
+
+
+def current_item() -> dict[str, Any]:
+    """Return the current playback item and progress metadata."""
+
+    production_id = _PLAYBACK_STATE["active_production_id"]
+
+    if production_id is None:
+        raise ProductionError("No active production.")
+
+    production = get_production(production_id)
+    current_index = int(_PLAYBACK_STATE["current_index"])
+
+    payload = _build_playback_payload(production, current_index)
+    _PLAYBACK_STATE["current_index"] = payload["current_index"]
+
+    return payload
+
+
+def next_item() -> dict[str, Any]:
+    """Advance playback by one item and return the new current item."""
+
+    payload = current_item()
+
+    item_count = payload["item_count"]
+    current_index = payload["current_index"]
+
+    if current_index < item_count - 1:
+        _PLAYBACK_STATE["current_index"] = current_index + 1
+
+    return current_item()
+
+
+def previous_item() -> dict[str, Any]:
+    """Move playback back by one item and return the new current item."""
+
+    payload = current_item()
+
+    current_index = payload["current_index"]
+
+    if current_index > 0:
+        _PLAYBACK_STATE["current_index"] = current_index - 1
+
+    return current_item()
+
+
+def end_production() -> dict[str, Any]:
+    """End playback and clear active production state."""
+
+    _PLAYBACK_STATE["active_production_id"] = None
+    _PLAYBACK_STATE["current_index"] = 0
+
+    return {
+        "production_id": None,
+        "production_name": None,
+        "current_index": 0,
+        "item_count": 0,
+        "remaining": 0,
+        "current_item": None,
+    }

@@ -44,6 +44,7 @@ from fastapi.templating import Jinja2Templates
 from source.api.contestants import router as contestant_router
 from source.api.familyfeud import router as familyfeud_router
 from source.api.game_engines import router as game_engines_router
+from source.api.production_playback import router as production_playback_router
 from source.api.questions import router as question_router
 from source.api.productions import router as production_router
 from source.backend.config import load_settings
@@ -158,6 +159,7 @@ app.include_router(question_router)
 app.include_router(familyfeud_router)
 app.include_router(production_router)
 app.include_router(game_engines_router)
+app.include_router(production_playback_router)
 
 
 # ----------------------------------------------------------
