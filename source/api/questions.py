@@ -12,11 +12,12 @@ from fastapi import APIRouter
 from fastapi import HTTPException
 from pydantic import BaseModel
 
+from source.api.api_response import success
 from source.services.question_service import (
     add_question,
-    list_questions,
-    list_active_questions,
     find_question,
+    list_active_questions,
+    list_questions,
     random_question,
 )
 
@@ -71,10 +72,7 @@ class QuestionCreateRequest(BaseModel):
 
 @router.get("/")
 async def get_questions():
-
-    questions = list_questions()
-
-    return questions
+    return success(list_questions())
 
 
 # ==========================================================
@@ -83,8 +81,7 @@ async def get_questions():
 
 @router.get("/active")
 async def get_active():
-
-    return list_active_questions()
+    return success(list_active_questions())
 
 
 # ==========================================================
@@ -106,7 +103,7 @@ async def get_random():
 
         )
 
-    return question
+    return success(question)
 
 
 # ==========================================================
@@ -136,7 +133,7 @@ async def get_question(
 
         )
 
-    return question
+    return success(question)
 
 
 # ==========================================================
@@ -186,12 +183,9 @@ async def create_question(
 
     )
 
-    return {
-
-        "success": True,
-
-        "database_id": question.id,
-
-        "question_id": question.question_id,
-
-    }
+    return success(
+        {
+            "database_id": question.id,
+            "question_id": question.question_id,
+        }
+    )

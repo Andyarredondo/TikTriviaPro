@@ -1,10 +1,8 @@
-"""
-TikTrivia Pro
-Production API
-Version 0.2.0
-"""
+"""TikTrivia Pro production API."""
 
 from fastapi import APIRouter, HTTPException
+
+from source.api.api_response import success
 
 from source.services.production_engine import (
     ProductionError,
@@ -19,13 +17,6 @@ router = APIRouter(
     prefix="/api/productions",
     tags=["Productions"],
 )
-
-
-def success(data):
-    return {
-        "success": True,
-        "data": data,
-    }
 
 
 @router.get("")

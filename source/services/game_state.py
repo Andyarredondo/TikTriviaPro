@@ -61,6 +61,7 @@ class GameState:
         self.question_number = 0
         self.answers_found: list[int] = []
         self.correct_players: dict[int, str] = {}
+        self.score_history: dict[int, list[int]] = {}
         self.start_time: datetime | None = None
         self.end_time: datetime | None = None
         self.board_source: str = "Entire Database"
@@ -226,7 +227,51 @@ class GameState:
         self.add_event(
             f"{username} found answer #{rank}."
         )
+    # -----------------------------------------------------
+    # Score History
+    # -----------------------------------------------------
 
+    def record_score_change(
+        self,
+        contestant_id: int,
+        amount: int,
+    ) -> None:
+        """
+        Store one score adjustment for a contestant.
+        """
+
+        history = self.score_history.setdefault(
+            contestant_id,
+            [],
+        )
+
+        history.append(amount)
+
+    def pop_last_score_change(
+        self,
+        contestant_id: int,
+    ) -> int | None:
+        """
+        Remove and return the contestant's most recent score change.
+        """
+
+        history = self.score_history.get(
+            contestant_id
+        )
+
+        if not history:
+            return None
+
+        amount = history.pop()
+
+        if not history:
+            self.score_history.pop(
+                contestant_id,
+                None,
+            )
+
+        return amount    
+    
     # -----------------------------------------------------
     # Remaining Answers
     # -----------------------------------------------------

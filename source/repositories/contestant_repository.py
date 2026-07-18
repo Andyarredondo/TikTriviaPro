@@ -437,7 +437,31 @@ def reset_contestant_score(
     session.refresh(contestant)
 
     return contestant
+def adjust_contestant_score(
+    session: Session,
+    contestant_id: int,
+    amount: int,
+) -> Contestant:
+    """
+    Add or subtract points from one contestant's score.
+    """
 
+    contestant = get_contestant_by_id(
+        session=session,
+        contestant_id=contestant_id,
+    )
+
+    if contestant is None:
+        raise ValueError(
+            f"Contestant ID {contestant_id} was not found."
+        )
+
+    contestant.score += amount
+
+    session.commit()
+    session.refresh(contestant)
+
+    return contestant
 
 def reset_all_scores(session: Session) -> int:
     """

@@ -896,6 +896,20 @@ def _build_playback_payload(
     }
 
 
+def get_idle_playback_state() -> dict[str, Any]:
+    """Return the normalized playback payload for an idle state."""
+
+    return {
+        "production_id": None,
+        "production_name": None,
+        "current_index": 0,
+        "item_count": 0,
+        "remaining": 0,
+        "current_item": None,
+        "dispatch": None,
+    }
+
+
 def _build_playback_response(
     production: dict[str, Any],
     current_index: int,
@@ -1001,11 +1015,4 @@ def end_production() -> dict[str, Any]:
     _PLAYBACK_STATE["active_production_id"] = None
     _PLAYBACK_STATE["current_index"] = 0
 
-    return {
-        "production_id": None,
-        "production_name": None,
-        "current_index": 0,
-        "item_count": 0,
-        "remaining": 0,
-        "current_item": None,
-    }
+    return get_idle_playback_state()

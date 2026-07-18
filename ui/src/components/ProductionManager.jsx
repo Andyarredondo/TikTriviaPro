@@ -39,7 +39,7 @@ export default function ProductionManager({
     setValidationState(makeEmptyValidation());
     setLoadedProductionId("");
     setSelectedProduction(null);
-  }, [defaultEngineId]);
+  }, [defaultEngineId, setSelectedProduction]);
 
   const buildEditorItems = useCallback((incomingItems) => {
     return Array.from(
@@ -85,45 +85,48 @@ export default function ProductionManager({
       const nextDefaultEngine = (enabled?.id || fallback?.id || "");
 
       setGameEngines(normalized);
-      setDefaultEngineId(nextDefaultEngine);
-      setEngineErrorMessage("");
+setDefaultEngineId(nextDefaultEngine);
+setEngineErrorMessage("");
+setValidationState(makeEmptyValidation());
 
-      setItems((current) => {
-        return current.map((item) => {
-          if (item.engine) {
-            return item;
-          }
-
-          return {
-            ...item,
-            engine: nextDefaultEngine,
-          };
-        });
-      });
-    } catch (error) {
-      console.error(error);
-      setGameEngines([]);
-      setDefaultEngineId("");
-      setEngineErrorMessage(
-        error.message || "Unable to load game engines."
-      );
-    } finally {
-      setIsLoadingEngines(false);
-    }
+setItems((current) =>
+  current.map((item) => ({
+    ...item,
+    engine: item.engine || nextDefaultEngine,
+  }))
+);
+   } catch (error) {
+  console.error(error);
+  setGameEngines([]);
+  setDefaultEngineId("");
+  setItems((current) =>
+  current.map((item) => ({
+    ...item,
+    engine: "",
+  }))
+);
+  setValidationState(makeEmptyValidation());
+  setEngineErrorMessage(
+    error.message || "Unable to load game engines."
+  );
+} finally {
+  setIsLoadingEngines(false);
+}
   }, []);
 
   const refreshProductions = useCallback(async () => {
-    try {
-      const list = await api.productions.list();
-      setProductions(Array.isArray(list) ? list : []);
-    } catch (error) {
-      console.error(error);
-      setProductions([]);
-      setErrorMessage(
-        error.message || "Unable to load productions."
-      );
-    }
-  }, []);
+  try {
+    const list = await api.productions.list();
+    setProductions(Array.isArray(list) ? list : []);
+    setErrorMessage("");
+  } catch (error) {
+    console.error(error);
+    setProductions([]);
+    setErrorMessage(
+      error.message || "Unable to load productions."
+    );
+  }
+}, []);
 
   useEffect(() => {
     refreshProductions();
@@ -135,11 +138,14 @@ export default function ProductionManager({
 
   const validateProduction = useCallback(() => {
     const result = items.map((item) => {
-      return item.item_id.trim().length > 0;
-    });
+  return (
+    item.item_id.trim().length > 0 &&
+    item.engine.trim().length > 0
+  );
+});
 
-    setValidationState(result);
-    return result;
+setValidationState(result);
+return result;
   }, [items]);
 
   const onItemChange = useCallback((index, field, value) => {
@@ -160,19 +166,30 @@ export default function ProductionManager({
   }, []);
 
   const onValidate = useCallback(() => {
-    validateProduction();
-    setErrorMessage("");
-  }, [validateProduction]);
+  const result = validateProduction();
+
+  if (result.every(Boolean)) {
+  setErrorMessage("");
+} else {
+  setErrorMessage(
+    "Each production item must include both an Engine and an Item ID."
+  );
+}
+}, [validateProduction]);
 
   const onSave = useCallback(async () => {
     const name = productionName.trim();
     const cleanedItems = items
-      .map((item, index) => ({
-        sequence: index + 1,
-        engine: item.engine || defaultEngineId,
-        item_id: item.item_id.trim(),
-      }))
-      .filter((item) => item.item_id.length > 0);
+  .map((item, index) => ({
+    sequence: index + 1,
+    engine: (item.engine || defaultEngineId).trim(),
+    item_id: item.item_id.trim(),
+  }))
+  .filter(
+    (item) =>
+      item.item_id.length > 0 &&
+      item.engine.length > 0
+  );
 
     if (!name) {
       setErrorMessage("Production name is required.");
@@ -180,11 +197,11 @@ export default function ProductionManager({
     }
 
     if (cleanedItems.length === 0) {
-      setErrorMessage(
-        "Enter at least one Item ID before saving."
-      );
-      return;
-    }
+  setErrorMessage(
+    "Enter at least one valid Engine and Item ID before saving."
+  );
+  return;
+}
 
     setIsWorking(true);
 
@@ -211,16 +228,25 @@ export default function ProductionManager({
         }
       }
 
-      setErrorMessage("");
+            setErrorMessage("");
+      setValidationState(makeEmptyValidation());
     } catch (error) {
-      console.error(error);
-      setErrorMessage(
-        error.message || "Unable to save production."
-      );
-    } finally {
-      setIsWorking(false);
-    }
-  }, [defaultEngineId, items, loadedProductionId, loadProductionById, productionName, refreshProductions, setSelectedProduction]);
+  console.error(error);
+  setErrorMessage(
+    error.message || "Unable to save production."
+  );
+} finally {
+  setIsWorking(false);
+}
+}, [
+  defaultEngineId,
+  items,
+  loadedProductionId,
+  loadProductionById,
+  productionName,
+  refreshProductions,
+  setSelectedProduction,
+]);
 
   const onLoad = useCallback(async () => {
     if (!selectedProduction?.id) {
@@ -233,10 +259,11 @@ export default function ProductionManager({
     try {
       const production = productions.find((entry) => String(entry.id) === String(selectedProduction.id));
 
-      if (!production) {
-        setErrorMessage("Select a production to load.");
-        return;
-      }
+     if (!production) {
+    clearEditor();
+    setErrorMessage("Select a production to load.");
+    return;
+}
 
       setSelectedProduction(production);
       await loadProductionById(production.id);
@@ -249,39 +276,51 @@ export default function ProductionManager({
     } finally {
       setIsWorking(false);
     }
-  }, [loadProductionById, productions, selectedProduction, setSelectedProduction]);
+  }, [
+    clearEditor,
+    loadProductionById,
+    productions,
+    selectedProduction,
+]);
 
   const onDelete = useCallback(async () => {
     if (!selectedProduction?.id) {
-      setErrorMessage("Select a production to delete.");
-      return;
+        setErrorMessage("Select a production to delete.");
+        return;
     }
 
     const approved = window.confirm(
-      "Delete this production?"
+        "Delete this production?"
     );
 
     if (!approved) {
-      return;
+        return;
     }
 
     setIsWorking(true);
 
     try {
-      await api.productions.remove(selectedProduction.id);
-      await refreshProductions();
-      setSelectedProduction(null);
-      clearEditor();
-      setErrorMessage("");
+        await api.productions.remove(selectedProduction.id);
+
+        await refreshProductions();
+
+        clearEditor();
+
+        setErrorMessage("");
     } catch (error) {
-      console.error(error);
-      setErrorMessage(
-        error.message || "Unable to delete production."
-      );
+        console.error(error);
+        setErrorMessage(
+            error.message || "Unable to delete production."
+        );
     } finally {
-      setIsWorking(false);
+        setIsWorking(false);
     }
-  }, [clearEditor, refreshProductions, selectedProduction, setSelectedProduction]);
+}, [
+    clearEditor,
+    refreshProductions,
+    selectedProduction,
+    setErrorMessage,
+]);
 
   return (
     <div className="deck-card production-manager">
@@ -391,7 +430,7 @@ export default function ProductionManager({
                     value={engine.id}
                     disabled={engine.enabled !== true}
                   >
-                    {engine.name}
+                    {engine.display_name || engine.name || engine.id}
                   </option>
                 ))}
               </select>

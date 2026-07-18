@@ -1,17 +1,17 @@
-"""
-TikTrivia Pro
-Production Playback API
-Version 0.1.0
-"""
+"""TikTrivia Pro production playback API."""
 
 from fastapi import APIRouter, HTTPException
 
-from source.services.production_engine import ProductionError
-from source.services.production_engine import current_item
-from source.services.production_engine import end_production
-from source.services.production_engine import next_item
-from source.services.production_engine import previous_item
-from source.services.production_engine import start_production
+from source.api.api_response import success
+from source.services.production_engine import (
+    ProductionError,
+    current_item,
+    end_production,
+    get_idle_playback_state,
+    next_item,
+    previous_item,
+    start_production,
+)
 
 router = APIRouter(
     prefix="/api/production-playback",
@@ -22,7 +22,7 @@ router = APIRouter(
 @router.post("/start/{production_id}")
 def api_start_production_playback(production_id: int):
     try:
-        return start_production(production_id)
+        return success(start_production(production_id))
     except ProductionError as error:
         message = str(error)
         if "was not found" in message:
@@ -33,15 +33,21 @@ def api_start_production_playback(production_id: int):
 @router.get("/current")
 def api_current_production_playback_item():
     try:
-        return current_item()
+        return success(current_item())
     except ProductionError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        if str(error) == "No active production.":
+            return success(get_idle_playback_state())
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
 
 
 @router.post("/next")
 def api_next_production_playback_item():
     try:
-        return next_item()
+        return success(next_item())
     except ProductionError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -49,11 +55,11 @@ def api_next_production_playback_item():
 @router.post("/previous")
 def api_previous_production_playback_item():
     try:
-        return previous_item()
+        return success(previous_item())
     except ProductionError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.post("/end")
 def api_end_production_playback():
-    return end_production()
+    return success(end_production())

@@ -1,131 +1,161 @@
 /* ===========================================================
-   Andy the Renaissance Man — Friendly Feud Viewer Overlay
-
-   DESIGN PHILOSOPHY: This is a broadcast graphic, not a
-   responsive web page. All sizing uses cqw (container-query
-   width) and % units anchored to the square canvas width.
-   When the browser source is resized, every element scales
-   by the same factor. Nothing reflows or repositions.
-
-   Design canvas reference: 1000 × 1000
-   1cqw = 1% of canvas width (10px at 1000px source)
+   TikTrivia Pro - Friendly Feud Viewer Overlay
+   Broadcast-first visual system for TikTok LIVE Studio
    =========================================================== */
-
-/* -------------------------------------------------------
-   CANVAS CONTAINER
-   ------------------------------------------------------- */
 
 .ff-overlay{
     width:100%;
-
     display:flex;
-
     flex-direction:column;
-
-    padding:18px;
-
+    align-items:center;
+    justify-content:flex-start;
+    padding:2.2cqw 2.2cqw 1.6cqw;
     box-sizing:border-box;
-
-    background:transparent;
-
-    gap:8px;
-
+    gap:1.05cqw;
     overflow:visible;
-
     container-type:inline-size;
+    background:
+        radial-gradient(circle at 50% -15%, rgba(212,175,55,.18), rgba(212,175,55,0) 48%),
+        linear-gradient(180deg, rgba(7,7,8,.92), rgba(16,16,17,.90));
+    border:1px solid rgba(212,175,55,.34);
+    border-radius:1.8cqw;
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.03),
+        0 .45cqw 1.5cqw rgba(0,0,0,.55);
 }
 
 .ff-logo-row{ display:none; }
 .ff-logo{ display:none; }
 
-/* -------------------------------------------------------
-   CATEGORY
-   ------------------------------------------------------- */
-
 .ff-category{
+    width:100%;
     text-align:center;
-
     color:var(--rrn-gold);
-
-    font-size:2.0cqw;
-
-    font-weight:700;
-
-    letter-spacing:0.08em;
-
+    font-size:1.55cqw;
+    font-weight:800;
+    letter-spacing:.16em;
     text-transform:uppercase;
-
     margin:0;
-
+    line-height:1.15;
+    text-shadow:0 0 .7cqw rgba(212,175,55,.32);
     flex-shrink:0;
 }
-/* -------------------------------------------------------
-   QUESTION
-   ------------------------------------------------------- */
 
 .ff-question{
-    background:linear-gradient(
-        180deg,
-        rgba(243,231,196,.10),
-        rgba(243,231,196,.04)
-    );
-    border:1px solid rgba(212,175,55,.35);
-    border-radius:1.0cqw;
-
-    padding:1.2% 2%;
-
-    font-size:2.6cqw;
-    line-height:1.22;
-
+    width:100%;
+    text-align:center;
     color:var(--rrn-ivory);
-
+    font-size:3.1cqw;
+    font-weight:800;
+    line-height:1.2;
+    letter-spacing:.02em;
+    padding:1.25cqw 1.5cqw;
+    background:linear-gradient(180deg, rgba(38,38,38,.92), rgba(22,22,22,.95));
+    border:2px solid rgba(212,175,55,.82);
+    border-radius:1.4cqw;
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.05),
+        0 .2cqw .9cqw rgba(0,0,0,.45);
     flex-shrink:0;
 }
-/* -------------------------------------------------------
-   ANSWERS
-   ------------------------------------------------------- */
 
 .ff-answers{
+    width:100%;
     display:flex;
     flex-direction:column;
-
-    gap:0.45cqw;
+    gap:.7cqw;
 }
 
 .ff-empty{
+    width:100%;
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:4%;
-    color:rgba(244,234,208,.4);
-    font-size:2.8cqw;
+    text-align:center;
+    padding:4.2cqw 2cqw;
+    color:rgba(244,234,208,.58);
+    font-size:2.55cqw;
+    background:linear-gradient(180deg, rgba(32,32,32,.78), rgba(20,20,20,.82));
+    border:1px solid rgba(212,175,55,.28);
+    border-radius:1.4cqw;
 }
 
-/* -------------------------------------------------------
-   STATUS BAR
-   ------------------------------------------------------- */
+/* Keep class names and structure; override layout visuals for equal plaques. */
+.ff-answers .answer-plaque{
+    position:relative;
+    overflow:hidden;
+    height:9.2cqw;
+    min-height:9.2cqw;
+    max-height:9.2cqw;
+    background:linear-gradient(180deg, #2b2b2b, #1e1e1e);
+    border:1px solid rgba(212,175,55,.46);
+    border-radius:1.25cqw;
+    display:grid;
+    grid-template-columns:7.5cqw 1fr;
+    align-items:center;
+    gap:.6cqw;
+    padding:0 .9cqw;
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.03),
+        0 .15cqw .55cqw rgba(0,0,0,.36);
+    backdrop-filter:blur(1.8px);
+}
+
+.ff-answers .answer-rank{
+    font-size:3.2cqw;
+    font-weight:800;
+    color:var(--rrn-gold);
+    text-align:center;
+    line-height:1;
+}
+
+.ff-answers .answer-text{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    justify-self:stretch;
+
+    font-size:2.55cqw;
+    font-weight:800;
+    color:var(--rrn-ivory);
+    line-height:1;
+    letter-spacing:.07cqw;
+    text-align:center;
+    
+    
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
 
 .ff-status-bar{
+    width:100%;
     display:flex;
-
     justify-content:center;
     align-items:center;
-
-    gap:2cqw;
-
-    margin-top:0.8cqw;
-
-    padding-top:0.8cqw;
-
-    border-top:1px solid rgba(212,175,55,.25);
-
-    font-size:1.8cqw;
-    font-weight:700;
-    letter-spacing:0.05em;
-
-    flex-shrink:0;
-
+    gap:0;
+    margin-top:.25cqw;
+    padding-top:.8cqw;
+    border-top:1px solid rgba(212,175,55,.38);
+    font-size:1.5cqw;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
     color:var(--rrn-ivory);
+    flex-shrink:0;
+}
+
+.ff-status-bar > span{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:2.8cqw;
+    padding:0 1.4cqw;
+    white-space:nowrap;
+}
+
+.ff-status-bar > span + span{
+    border-left:1px solid rgba(212,175,55,.72);
 }
 
 .ff-timer{
@@ -133,54 +163,27 @@
 }
 
 .ff-found{
-    color:var(--rrn-live);
+    color:var(--rrn-gold);
 }
-
-/* -------------------------------------------------------
-   ANSWER PLAQUE REVEAL ANIMATIONS
-   (layout defined in theme.css .answer-plaque)
-   ------------------------------------------------------- */
-
-.answer-plaque{
-    position:relative;
-    overflow:hidden;
-    backdrop-filter:blur(3px);
-}
-
-.answer-plaque.revealed{
-    animation:plaque-reveal .35s ease-out;
-}
-
-.answer-plaque.revealed::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    background:linear-gradient(
-        105deg,
-        transparent 15%,
-        rgba(255,255,255,.16) 45%,
-        transparent 75%
-    );
-    transform:translateX(125%);
-    animation:reveal-shimmer .7s ease-out;
-    pointer-events:none;
-}
-
-/* -------------------------------------------------------
-   STANDBY SCREEN
-   ------------------------------------------------------- */
 
 .standby-overlay{
     width:100%;
+    min-height:36cqw;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    background:transparent;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(212,175,55,.14), rgba(212,175,55,0) 45%),
+        linear-gradient(180deg, rgba(9,9,10,.90), rgba(18,18,19,.92));
     color:var(--rrn-ivory);
-    padding:12% 8%;
+    border:1px solid rgba(212,175,55,.34);
+    border-radius:1.8cqw;
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.03),
+        0 .45cqw 1.5cqw rgba(0,0,0,.5);
+    padding:2.6cqw 2.1cqw;
     box-sizing:border-box;
-    gap:5%;
     container-type:inline-size;
 }
 
@@ -189,52 +192,98 @@
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    gap:4%;
+    gap:1.2cqw;
     text-align:center;
+    width:100%;
 }
 
 .standby-title{
-    font-size:6cqw;
-    font-weight:800;
-    letter-spacing:0.14em;
+    font-size:5.5cqw;
+    font-weight:900;
+    letter-spacing:.12em;
     text-transform:uppercase;
     color:var(--rrn-gold);
     margin:0;
-    line-height:1.1;
+    line-height:1.03;
+    text-shadow:0 0 .9cqw rgba(212,175,55,.25);
 }
 
 .standby-subtitle{
-    font-size:3.8cqw;
-    font-weight:700;
-    letter-spacing:0.10em;
+    font-size:3.15cqw;
+    font-weight:800;
+    letter-spacing:.09em;
     text-transform:uppercase;
     color:var(--rrn-ivory);
     margin:0;
-    line-height:1.1;
+    line-height:1.06;
 }
 
-/* -------------------------------------------------------
-   ANIMATIONS
-   ------------------------------------------------------- */
+.answer-plaque.revealed{
+    animation:plaque-reveal .32s cubic-bezier(.2,.8,.2,1);
+}
+
+.answer-plaque.revealed::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(
+        104deg,
+        transparent 16%,
+        rgba(255,255,255,.13) 48%,
+        transparent 78%
+    );
+    transform:translateX(120%);
+    animation:reveal-shimmer .36s ease-out;
+    pointer-events:none;
+}
 
 @keyframes plaque-reveal{
     from{
-        opacity:.35;
-        transform:scale(.97);
+        opacity:.45;
+        transform:translateY(.2cqw) scale(.985);
     }
 
     to{
         opacity:1;
-        transform:scale(1);
+        transform:translateY(0) scale(1);
     }
 }
 
 @keyframes reveal-shimmer{
     from{
-        transform:translateX(-125%);
+        transform:translateX(-118%);
     }
 
     to{
-        transform:translateX(125%);
+        transform:translateX(118%);
     }
+}
+/* -------------------------------------------------------
+   ROUND POINT VALUE
+------------------------------------------------------- */
+
+.ff-round-points{
+
+    width:100%;
+
+    margin-top:1.2cqw;
+
+    padding-top:.8cqw;
+
+    border-top:1px solid rgba(212,175,55,.25);
+
+    text-align:center;
+
+    font-size:1.75cqw;
+
+    font-weight:800;
+
+    text-shadow:0 0 .4cqw rgba(212,175,55,.30);
+
+    letter-spacing:.08em;
+
+    color:var(--rrn-gold);
+
+    text-transform:uppercase;
+
 }

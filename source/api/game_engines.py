@@ -1,11 +1,8 @@
-"""
-TikTrivia Pro
-Game Engines API
-Version 0.1.0
-"""
+"""TikTrivia Pro game engines API."""
 
 from fastapi import APIRouter, HTTPException
 
+from source.api.api_response import success
 from source.services.production_engine import ProductionError
 from source.services.production_engine import get_game_engines
 
@@ -18,9 +15,6 @@ router = APIRouter(
 @router.get("")
 def api_list_game_engines():
     try:
-        return {
-            "success": True,
-            "data": get_game_engines(),
-        }
+        return success(get_game_engines())
     except ProductionError as error:
         raise HTTPException(status_code=500, detail=str(error))

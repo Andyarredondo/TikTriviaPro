@@ -18,7 +18,9 @@ from __future__ import annotations
 
 from source.backend.session import close_session
 from source.backend.session import get_session
+from source.services.game_state import GAME
 from source.repositories.contestant_repository import (
+    adjust_contestant_score as repo_adjust_contestant_score,
     create_contestant,
     delete_contestant,
     get_active_contestants,
@@ -174,7 +176,68 @@ def reset_contestant_score(
 
         close_session(session)
 
+def adjust_contestant_score(
+    contestant_id: int,
+    amount: int,
+):
+    """
+    Add or subtract points from a contestant's score.
+    """
 
+    session = get_session()
+
+    try:
+
+        contestant = repo_adjust_contestant_score(
+            session=session,
+            contestant_id=contestant_id,
+            amount=amount,
+        )
+
+        GAME.record_score_change(
+            contestant_id=contestant_id,
+            amount=amount,
+        )
+
+        return contestant
+
+    finally:
+
+        close_session(session)
+def undo_last_score_change(
+    contestant_id: int,
+):
+    """
+    Undo the most recent score adjustment for one contestant.
+    """
+
+    amount = GAME.pop_last_score_change(contestant_id)
+
+    if amount is None:
+        return None
+
+    session = get_session()
+
+    try:
+
+        return repo_adjust_contestant_score(
+            session=session,
+            contestant_id=contestant_id,
+            amount=-amount,
+        )
+
+    except Exception:
+
+        GAME.record_score_change(
+            contestant_id=contestant_id,
+            amount=amount,
+        )
+
+        raise
+
+    finally:
+
+        close_session(session)        
 def set_contestant_active(
     contestant_id: int,
     active: bool,

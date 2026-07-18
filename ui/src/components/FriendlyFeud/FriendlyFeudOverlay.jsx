@@ -26,6 +26,14 @@ export default function FriendlyFeudOverlay({
 
     const foundCount = status?.answers_found?.length ?? 0;
     const totalCount = foundCount + (status?.remaining_answers ?? 0);
+    const boardDifficulty = board?.difficulty ?? "Intermediate";
+
+const pointsPerAnswer =
+    boardDifficulty === "Easy"
+        ? 5
+        : boardDifficulty === "Difficult"
+            ? 10
+            : 8;
 
     return (
         <div className="ff-overlay">
@@ -45,23 +53,28 @@ export default function FriendlyFeudOverlay({
                         aria-label="Friendly Feud answers"
                     >
                         {answers.map((answer) => (
-                            <AnswerPlaque
+                           <AnswerPlaque
                                 key={answer.id}
                                 rank={answer.rank}
                                 answer={answer.answer}
-                                points={answer.points}
                                 revealed={answer.revealed}
                             />
                         ))}
                     </div>
 
-                    {status?.question_open && (
-                        <div className="ff-status-bar">
-                            <span className="live-indicator">🟢 LIVE</span>
-                            <span className="ff-timer">⏱ {timer}</span>
-                            <span className="ff-found">✓ {foundCount}/{totalCount}</span>
-                        </div>
-                    )}
+                   {status?.question_open && (
+    <>
+        <div className="ff-status-bar">
+            <span className="live-indicator">🟢 LIVE</span>
+            <span className="ff-timer">⏱ {timer}</span>
+            <span className="ff-found">✓ {foundCount}/{totalCount}</span>
+        </div>
+
+        <div className="ff-round-points">
+            ⭐ CORRECT ANSWERS ARE WORTH {pointsPerAnswer} POINTS EACH ⭐
+        </div>
+    </>
+)}
                 </>
             ) : (
                 <div className="ff-empty">

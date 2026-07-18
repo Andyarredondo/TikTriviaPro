@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../services/api";
 import ProductionManager from "../components/ProductionManager";
+import ContestantManager from "../components/ContestantManager";
 
 const HIDDEN = "████████████████";
 
@@ -11,6 +12,7 @@ export default function HostDashboard() {
     const [randomDeck, setRandomDeck] = useState(null);
     const [boardSource, setBoardSource] = useState("Entire Database");
     const [selectedCategory, setSelectedCategory] = useState("");
+    const [randomDeckCategory, setRandomDeckCategory] = useState("Entire Database");
     const [selectedAnswerRank, setSelectedAnswerRank] = useState("");
     const [productionPlayback, setProductionPlayback] = useState(null);
     const [playbackBusy, setPlaybackBusy] = useState(false);
@@ -19,25 +21,6 @@ export default function HostDashboard() {
     const [selectedProduction, setSelectedProduction] = useState(null);
 
     const refreshStatus = useCallback(async () => {
-        try {
-            const [status, deckStatus] = await Promise.all([
-                api.familyFeud.status(),
-                api.familyFeud.randomDeckStatus(),
-            ]);
-
-            setGameStatus(status);
-            setRandomDeck(deckStatus);
-            setErrorMessage("");
-
-            if (status.board_loaded) {
-                const currentBoard = await api.familyFeud.current();
-                setBoard(currentBoard);
-            }
-        } catch (error) {
-            console.error(error);
-            setErrorMessage(error.message || "Unable to refresh game status.");
-        }
-    }, []);
 
     const refreshContestants = useCallback(async () => {
         try {
@@ -54,16 +37,44 @@ export default function HostDashboard() {
             try {
                 const data = await loader();
 
-                setBoard(data);
-                setErrorMessage("");
+                if (data?.answers) {
+    setBoard(data);
+    setSelectedAnswerRank("");
+} else {
+    setBoard(null);
+    setSelectedAnswerRank("");
+}
 
-                await refreshStatus();
+setErrorMessage("");
+
+await refreshStatus();
             } catch (error) {
                 console.error(error);
                 setErrorMessage(error.message || "Unable to load board.");
             }
         },
         [refreshStatus]
+    );
+
+    const refreshProductionPlaybackCurrent = useCallback(
+        async ({ suppressError = true } = {}) => {
+            try {
+                const current = await api.productionPlayback.current();
+setProductionPlayback(current);
+setErrorMessage("");
+            } catch (error) {
+    setProductionPlayback(null);
+    setBoard(null);
+
+    if (!suppressError) {
+        console.error(error);
+        setErrorMessage(
+            error.message || "Unable to load production playback."
+        );
+    }
+}
+        },
+        []
     );
 
     useEffect(() => {
@@ -74,11 +85,22 @@ export default function HostDashboard() {
                     api.familyFeud.getCategories(),
                 ]);
 
-                setBoardSource(source?.board_source || "Entire Database");
-                setCategories(categoryList?.categories || []);
+                setBoardSource(
+    source?.board_source ?? "Entire Database"
+);
+setCategories(categoryList?.categories ?? []);
 
-                if (source?.board_source === "Category") {
-                    const nextCategory = source?.selected_category || categoryList?.categories?.[0] || "";
+setRandomDeckCategory(
+    source?.board_source === "Category" && source?.selected_category
+        ? source.selected_category
+        : "Entire Database"
+);
+
+if (source?.board_source === "Category") {
+                    const nextCategory =
+    source?.selected_category ??
+    categoryList?.categories?.[0] ??
+    "";
                     setSelectedCategory(nextCategory);
                 } else {
                     setSelectedCategory("");
@@ -87,13 +109,46 @@ export default function HostDashboard() {
                 console.error(error);
             }
 
-            refreshContestants();
-            await refreshProductionPlaybackCurrent();
-            loadBoard(api.familyFeud.nextBoard);
+           await refreshContestants();
+
+await refreshProductionPlaybackCurrent();
+
+try {
+    const status = await api.familyFeud.status();
+
+    setGameStatus(status);
+
+    if (
+        status?.board_loaded &&
+        source?.board_source !== "Production"
+    ) {
+        const currentBoard =
+            await api.familyFeud.current();
+
+        if (currentBoard?.answers) {
+            setBoard(currentBoard);
+        } else {
+            setBoard(null);
+        }
+    } else if (source?.board_source !== "Production") {
+        await loadBoard(
+            api.familyFeud.nextBoard
+        );
+    } else {
+        setBoard(null);
+    }
+} catch (error) {
+    console.error(error);
+
+    setErrorMessage(
+        error.message ||
+        "Unable to initialize dashboard."
+    );
+}
         };
 
         initializeDashboard();
-    }, [loadBoard, refreshContestants]);
+    }, [loadBoard, refreshContestants, refreshProductionPlaybackCurrent]);
 
     useEffect(() => {
         const statusTimer = window.setInterval(refreshStatus, 1000);
@@ -116,12 +171,13 @@ export default function HostDashboard() {
         [contestants]
     );
 
-    const boardAnswers = board?.answers || [];
+    const boardAnswers = board?.answers ?? [];
 
     useEffect(() => {
+        const answers = board?.answers ?? [];
         const nextSelectedRank =
-            boardAnswers.find((answer) => !answer.revealed)?.rank ??
-            boardAnswers[0]?.rank ??
+            answers.find((answer) => !answer.revealed)?.rank ??
+            answers[0]?.rank ??
             "";
 
         setSelectedAnswerRank(
@@ -129,7 +185,7 @@ export default function HostDashboard() {
                 ? ""
                 : String(nextSelectedRank)
         );
-    }, [boardAnswers]);
+    }, [board?.board_id]);
 
     const timer = useMemo(() => {
         const seconds = gameStatus?.timer_seconds ?? 0;
@@ -159,14 +215,17 @@ export default function HostDashboard() {
     );
 
     const playbackProductionName =
-        productionPlayback?.production_name || "No active production";
+    productionPlayback?.production_name ?? "No active production";
 
-    const playbackCurrentItem = productionPlayback?.current_item || null;
+    const playbackCurrentItem =
+        productionPlayback?.current_item ?? null;
+    const playbackItemCount = productionPlayback?.item_count ?? 0;
 
     const playbackProgressText =
-        productionPlayback?.item_count != null
-            ? `${productionPlayback.current_index + 1} / ${productionPlayback.item_count}`
-            : "-";
+    playbackItemCount > 0 &&
+    Number.isInteger(productionPlayback?.current_index)
+        ? `${productionPlayback.current_index + 1} / ${playbackItemCount}`
+        : "-";
 
     const playbackEngineText = playbackCurrentItem?.engine
         ? playbackCurrentItem.engine
@@ -179,25 +238,8 @@ export default function HostDashboard() {
               .join(" ")
         : "-";
 
-    const playbackItemIdText = playbackCurrentItem?.item_id || "-";
-
-    async function refreshProductionPlaybackCurrent({
-        suppressError = true,
-    } = {}) {
-        try {
-            const current = await api.productionPlayback.current();
-            setProductionPlayback(current);
-        } catch (error) {
-            setProductionPlayback(null);
-
-            if (!suppressError) {
-                console.error(error);
-                setErrorMessage(
-                    error.message || "Unable to load production playback."
-                );
-            }
-        }
-    }
+    const playbackItemIdText =
+    playbackCurrentItem?.item_id ?? "-";
 
     async function startProductionPlayback() {
         if (!selectedProduction?.id) {
@@ -209,11 +251,13 @@ export default function HostDashboard() {
 
         try {
             const playback = await api.productionPlayback.start(
-                selectedProduction?.id
-            );
+    selectedProduction?.id
+);
 
-            setProductionPlayback(playback);
-            setErrorMessage("");
+setProductionPlayback(playback);
+setBoard(null);
+setSelectedAnswerRank("");
+setErrorMessage("");
         } catch (error) {
             console.error(error);
             setErrorMessage(
@@ -225,12 +269,13 @@ export default function HostDashboard() {
     }
 
     async function nextProductionPlaybackItem() {
-        setPlaybackBusy(true);
+    setPlaybackBusy(true);
 
-        try {
-            const playback = await api.productionPlayback.next();
-            setProductionPlayback(playback);
-            setErrorMessage("");
+    try {
+        const playback = await api.productionPlayback.next();
+        setProductionPlayback(playback);
+        setBoard(null);
+        setErrorMessage("");
         } catch (error) {
             console.error(error);
             setErrorMessage(
@@ -242,12 +287,13 @@ export default function HostDashboard() {
     }
 
     async function previousProductionPlaybackItem() {
-        setPlaybackBusy(true);
+    setPlaybackBusy(true);
 
-        try {
-            const playback = await api.productionPlayback.previous();
-            setProductionPlayback(playback);
-            setErrorMessage("");
+    try {
+        const playback = await api.productionPlayback.previous();
+        setProductionPlayback(playback);
+        setBoard(null);
+        setErrorMessage("");
         } catch (error) {
             console.error(error);
             setErrorMessage(
@@ -263,8 +309,10 @@ export default function HostDashboard() {
 
         try {
             await api.productionPlayback.end();
-            setProductionPlayback(null);
-            setErrorMessage("");
+setProductionPlayback(null);
+setBoard(null);
+setSelectedAnswerRank("");
+setErrorMessage("");
         } catch (error) {
             console.error(error);
             setErrorMessage(
@@ -278,7 +326,8 @@ export default function HostDashboard() {
     async function openRound() {
         try {
             await api.familyFeud.openRound();
-            await refreshStatus();
+await refreshStatus();
+setErrorMessage("");
         } catch (error) {
             console.error(error);
             setErrorMessage(error.message || "Unable to open round.");
@@ -288,7 +337,9 @@ export default function HostDashboard() {
     async function closeRound() {
         try {
             await api.familyFeud.closeRound();
-            await refreshStatus();
+await refreshStatus();
+setErrorMessage("");
+
         } catch (error) {
             console.error(error);
             setErrorMessage(error.message || "Unable to close round.");
@@ -299,11 +350,15 @@ export default function HostDashboard() {
         try {
             const updatedBoard = await api.familyFeud.resetRound();
 
-            if (updatedBoard?.answers) {
-                setBoard(updatedBoard);
-            }
+if (updatedBoard?.answers) {
+    setBoard(updatedBoard);
+    setSelectedAnswerRank("");
+} else {
+    setBoard(null);
+    setSelectedAnswerRank("");
+}
 
-            await refreshStatus();
+await refreshStatus();
         } catch (error) {
             console.error(error);
             setErrorMessage(error.message || "Unable to reset round.");
@@ -311,19 +366,26 @@ export default function HostDashboard() {
     }
 
     async function revealRemaining() {
-        try {
-            const updatedBoard =
-                await api.familyFeud.revealRemaining();
+    try {
+        const updatedBoard =
+            await api.familyFeud.revealRemaining();
 
-            setBoard(updatedBoard);
-            await refreshStatus();
-        } catch (error) {
-            console.error(error);
-            setErrorMessage(
-                error.message || "Unable to reveal remaining answers."
-            );
-        }
+        if (updatedBoard?.answers) {
+    setBoard(updatedBoard);
+    setSelectedAnswerRank("");
+} else {
+    setBoard(null);
+    setSelectedAnswerRank("");
+}
+
+        await refreshStatus();
+    } catch (error) {
+        console.error(error);
+        setErrorMessage(
+            error.message || "Unable to reveal remaining answers."
+        );
     }
+}
 
     async function revealNextAnswer() {
         const nextAnswer = boardAnswers.find((answer) => !answer.revealed);
@@ -345,48 +407,76 @@ export default function HostDashboard() {
         await revealAnswer(Number(selectedAnswerRank));
     }
 
-    async function resetAllScores() {
-        try {
-            await Promise.all(
-                contestants.map((player) => api.contestants.resetScore(player.id))
-            );
+    async function adjustContestantScore(contestantId, amount) {
+    try {
+        await api.contestants.adjustScore(contestantId, amount);
 
-            await refreshContestants();
-            setErrorMessage("");
-        } catch (error) {
-            console.error(error);
-            setErrorMessage(error.message || "Unable to reset scores.");
-        }
+        await refreshContestants();
+
+        setErrorMessage("");
+    } catch (error) {
+        console.error(error);
+
+        setErrorMessage(
+            error.message || "Unable to adjust contestant score."
+        );
     }
+}
+async function undoContestantScore(contestantId) {
+    try {
+        await api.contestants.undoLastScore(contestantId);
 
+        await refreshContestants();
+
+        setErrorMessage("");
+    } catch (error) {
+        console.error(error);
+
+        setErrorMessage(
+            error.message ||
+            "No score change is available to undo."
+        );
+    }
+}
     async function nextRandomBoard() {
-        try {
-            const updatedBoard = await api.familyFeud.randomDeckNext();
+    try {
+        const updatedBoard = await api.familyFeud.randomDeckNext();
 
-            if (updatedBoard?.answers) {
-                setBoard(updatedBoard);
-            }
-
-            await refreshStatus();
-            setErrorMessage("");
-        } catch (error) {
-            console.error(error);
-            setErrorMessage(
-                error.message || "Unable to load the next random board."
-            );
+        if (updatedBoard?.answers) {
+            setBoard(updatedBoard);
+            setSelectedAnswerRank("");
+        } else {
+            setBoard(null);
+            setSelectedAnswerRank("");
         }
+
+        await refreshStatus();
+        setErrorMessage("");
+    } catch (error) {
+        console.error(error);
+        setErrorMessage(
+            error.message || "Unable to load the next random board."
+        );
     }
+}
 
     // Individual Answer Reveal
     async function revealAnswer(rank) {
         try {
             const updatedBoard = await api.familyFeud.revealAnswer(
-                rank
-            );
+    rank
+);
 
-            setBoard(updatedBoard);
-            await refreshStatus();
-            setErrorMessage("");
+if (updatedBoard?.answers) {
+    setBoard(updatedBoard);
+    setSelectedAnswerRank("");
+} else {
+    setBoard(null);
+    setSelectedAnswerRank("");
+}
+
+await refreshStatus();
+setErrorMessage("");
         } catch (error) {
             console.error(error);
             setErrorMessage(
@@ -418,9 +508,9 @@ export default function HostDashboard() {
                         Registration Mode
                         <br />
                         <select
-                            value={
-                                gameStatus?.registration_mode || "Hybrid"
-                            }
+                           value={
+    gameStatus?.registration_mode ?? "Hybrid"
+}
                             onChange={async (event) => {
                                 const nextMode = event.target.value;
 
@@ -445,10 +535,12 @@ export default function HostDashboard() {
                             <option value="Hybrid">Hybrid</option>
                         </select>
                     </div>
-
+                    <ContestantManager
+                        refreshContestants={refreshContestants}
+                    />
                     <div className="player-header-row">
-                        <span>Player Name</span>
-                        <span>Current Score</span>
+                        <span>Name</span>
+                        <span>Gold Score</span>
                     </div>
 
                     {leaderboard.length === 0 ? (
@@ -458,12 +550,72 @@ export default function HostDashboard() {
                     ) : (
                         leaderboard.map((player) => (
                             <div
-                                className="contestant-row live-player-row"
-                                key={player.id}
-                            >
-                                <span className="live-player-name">{player.display_name}</span>
-                                <b className="live-player-points">{player.score}</b>
-                            </div>
+    className="contestant-row live-player-row"
+    key={player.id}
+>
+
+    <div className="contestant-name">
+        {player.display_name}
+    </div>
+
+    <div className="contestant-score">
+    {player.score}
+</div>
+    <div className="contestant-buttons">
+
+        <button
+            type="button"
+            onClick={() => adjustContestantScore(player.id, 5)}
+        >
+           ➕₅ 
+        </button>
+
+        <button
+            type="button"
+            onClick={() => adjustContestantScore(player.id, 8)}
+        >
+            ➕₈
+        </button>
+
+        <button
+            type="button"
+            onClick={() => adjustContestantScore(player.id, 10)}
+        >
+            ➕₁₀
+        </button>
+
+        <button
+            type="button"
+            onClick={() => adjustContestantScore(player.id, -5)}
+        >
+            ➖₅
+        </button>
+
+        <button
+            type="button"
+            onClick={() => adjustContestantScore(player.id, -8)}
+        >
+            ➖₈
+        </button>
+
+        <button
+            type="button"
+            onClick={() => adjustContestantScore(player.id, -10)}
+        >
+            ➖₁₀
+        </button>
+
+        <button
+    type="button"
+    title="Undo Last Score Change"
+    onClick={() => undoContestantScore(player.id)}
+>
+    ↺
+</button>
+
+    </div>
+
+</div>
                         ))
                     )}
                 </section>
@@ -489,32 +641,33 @@ export default function HostDashboard() {
                     </div>
 
                     {board?.answers?.map((answer) => (
-                        <div className="answer" key={answer.id}>
-                            <div className="rank">{answer.rank}</div>
+                       <div className="answer-wrapper" key={answer.id}>
 
-                            <div className="answer-text">
-                                {answer.revealed ? answer.answer : HIDDEN}
-                            </div>
+    <div className="answer">
 
-                            <div>
-                                {answer.revealed ? answer.points : ""}
-                            </div>
+        <div className="rank">
+            {answer.rank}
+        </div>
 
-                            {/* Individual Answer Reveal */}
-                            <div className="answer-controls">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        revealAnswer(answer.rank)
-                                    }
-                                    disabled={answer.revealed === true}
-                                >
-                                    {answer.revealed
-                                        ? "Revealed"
-                                        : "Reveal"}
-                                </button>
-                            </div>
-                        </div>
+        <div className="answer-text">
+            {answer.revealed ? answer.answer : HIDDEN}
+        </div>
+
+    </div>
+
+    <div className="answer-controls">
+
+        <button
+            type="button"
+            onClick={() => revealAnswer(answer.rank)}
+            disabled={answer.revealed === true}
+        >
+            {answer.revealed ? "Revealed" : "Reveal"}
+        </button>
+
+    </div>
+
+</div>
                     ))}
 
                     <div className="status-bar">
@@ -718,31 +871,38 @@ export default function HostDashboard() {
                                             const nextSource = event.target.value;
 
                                             if (nextSource === "Production") {
-                                                setBoardSource(nextSource);
-                                                setSelectedCategory("");
-                                                await refreshProductionPlaybackCurrent();
-                                                setErrorMessage("");
-                                                return;
-                                            }
+    setBoardSource(nextSource);
+    setSelectedCategory("");
+    setBoard(null);
+    await refreshProductionPlaybackCurrent();
+    setErrorMessage("");
+    return;
+}
 
                                             if (nextSource === "Random Deck") {
-                                                setBoardSource(nextSource);
-                                                setSelectedCategory("");
-                                                setErrorMessage("");
-                                                return;
-                                            }
-
+    setBoardSource(nextSource);
+    setSelectedCategory("");
+    setBoard(null);
+    setErrorMessage("");
+    return;
+}
                                             try {
-                                                const updatedSource = await api.familyFeud.setBoardSource(nextSource);
-                                                setBoardSource(updatedSource?.board_source || nextSource);
-                                                setSelectedCategory(updatedSource?.selected_category || "");
-                                                if (updatedSource?.board) {
-                                                    setBoard(updatedSource.board);
-                                                }
-                                                if (updatedSource?.deck_status) {
-                                                    setRandomDeck(updatedSource.deck_status);
-                                                }
-                                                setErrorMessage("");
+            const updatedSource = await api.familyFeud.setBoardSource(nextSource);
+
+setBoardSource(updatedSource?.board_source ?? nextSource);
+setSelectedCategory(updatedSource?.selected_category ?? "");
+
+if (updatedSource?.board) {
+    setBoard(updatedSource.board);
+} else {
+    setBoard(null);
+}
+
+if (updatedSource?.deck_status) {
+    setRandomDeck(updatedSource.deck_status);
+}
+
+setErrorMessage("");
                                             } catch (error) {
                                                 console.error(error);
                                                 setErrorMessage(
@@ -833,15 +993,21 @@ export default function HostDashboard() {
 
                                                 try {
                                                     const updatedSource = await api.familyFeud.setCategorySource(nextCategory);
-                                                    setBoardSource(updatedSource?.board_source || "Category");
-                                                    setSelectedCategory(updatedSource?.selected_category || nextCategory);
-                                                    if (updatedSource?.board) {
-                                                        setBoard(updatedSource.board);
-                                                    }
-                                                    if (updatedSource?.deck_status) {
-                                                        setRandomDeck(updatedSource.deck_status);
-                                                    }
-                                                    setErrorMessage("");
+
+setBoardSource(updatedSource?.board_source ?? "Category");
+setSelectedCategory(updatedSource?.selected_category ?? nextCategory);
+
+if (updatedSource?.board) {
+    setBoard(updatedSource.board);
+} else {
+    setBoard(null);
+}
+
+if (updatedSource?.deck_status) {
+    setRandomDeck(updatedSource.deck_status);
+}
+
+setErrorMessage("");
                                                 } catch (error) {
                                                     console.error(error);
                                                     setErrorMessage(
@@ -868,44 +1034,55 @@ export default function HostDashboard() {
                             <div className="board-control-group">
                                 <div className="board-control-label">Board Actions</div>
 
-                                <div className="board-control-row">
-                                    <button
-                                        type="button"
-                                        onClick={revealNextAnswer}
-                                        disabled={!board || boardAnswers.every((answer) => answer.revealed)}
-                                    >
-                                        <span className="button-icon">👁</span>
-                                        <span className="button-label">
-                                            <span>Reveal Next</span>
-                                            <span>Answer</span>
-                                        </span>
-                                    </button>
+                                <div className="reveal-action-layout">
+    <button
+        type="button"
+        onClick={revealNextAnswer}
+        disabled={
+            !board ||
+            boardAnswers.every((answer) => answer.revealed)
+        }
+    >
+        <span className="button-icon">👁</span>
+        <span className="button-label">
+            <span>Reveal Next</span>
+            <span>Answer</span>
+        </span>
+    </button>
 
-                                    <select
-                                        value={selectedAnswerRank}
-                                        onChange={(event) => setSelectedAnswerRank(event.target.value)}
-                                        disabled={!board || boardAnswers.length === 0}
-                                    >
-                                        <option value="">Reveal specific answer</option>
-                                        {boardAnswers.map((answer) => (
-                                            <option key={answer.id} value={answer.rank}>
-                                                {answer.rank}. {answer.answer}
-                                            </option>
-                                        ))}
-                                    </select>
+    <div className="reveal-specific-controls">
+        <select
+            value={selectedAnswerRank}
+            onChange={(event) =>
+                setSelectedAnswerRank(event.target.value)
+            }
+            disabled={!board || boardAnswers.length === 0}
+        >
+            <option value="">Select a specific answer</option>
 
-                                    <button
-                                        type="button"
-                                        onClick={revealSelectedAnswer}
-                                        disabled={!board || !selectedAnswerRank}
-                                    >
-                                        <span className="button-icon">🎯</span>
-                                        <span className="button-label">
-                                            <span>Reveal</span>
-                                            <span>Specific</span>
-                                        </span>
-                                    </button>
-                                </div>
+            {boardAnswers.map((answer) => (
+                <option
+                    key={answer.id}
+                    value={String(answer.rank)}
+                >
+                    {answer.rank}. {answer.answer}
+                </option>
+            ))}
+        </select>
+
+        <button
+            type="button"
+            onClick={revealSelectedAnswer}
+            disabled={!board || !selectedAnswerRank}
+        >
+            <span className="button-icon">🎯</span>
+            <span className="button-label">
+                <span>Reveal Selected</span>
+                <span>Answer</span>
+            </span>
+        </button>
+    </div>
+</div>
 
                                 <div className="board-control-row">
                                     <button
@@ -1024,21 +1201,62 @@ export default function HostDashboard() {
                             </div>
                         </div>
 
-                        <div className="deck-card console-card">
-                            <h3>Random Deck</h3>
+                       <div className="deck-card console-card">
+    <h3>Random Deck</h3>
 
-                            <div className="board-control-row">
+    <div className="board-control-group">
+        <div className="board-control-label">
+            Deck Category
+        </div>
+
+        <div className="board-control-row">
+            <select
+                value={randomDeckCategory}
+                onChange={(event) =>
+                    setRandomDeckCategory(event.target.value)
+                }
+                disabled={boardLocked}
+            >
+                <option value="Entire Database">
+                    Entire Database
+                </option>
+
+                {categories.map((category) => (
+                    <option key={category} value={category}>
+                        {category}
+                    </option>
+                ))}
+            </select>
+        </div>
+    </div>
+
+    <div className="board-control-row">
                                 <button
                                     type="button"
                                     onClick={async () => {
                                         try {
-                                            await api.familyFeud.randomDeckNew();
-                                            const currentBoard = await api.familyFeud.current();
-                                            if (currentBoard?.answers) {
-                                                setBoard(currentBoard);
-                                            }
-                                            await refreshStatus();
-                                            setErrorMessage("");
+                                            if (randomDeckCategory === "Entire Database") {
+    await api.familyFeud.setBoardSource("Entire Database");
+} else {
+    await api.familyFeud.setCategorySource(randomDeckCategory);
+}
+
+        await api.familyFeud.randomDeckNew();
+setBoardSource("Random Deck");
+setSelectedCategory("");
+
+const currentBoard = await api.familyFeud.current();
+
+if (currentBoard?.answers) {
+    setBoard(currentBoard);
+    setSelectedAnswerRank("");
+} else {
+    setBoard(null);
+    setSelectedAnswerRank("");
+}
+
+await refreshStatus();
+setErrorMessage("");
                                         } catch (error) {
                                             console.error(error);
                                             setErrorMessage(

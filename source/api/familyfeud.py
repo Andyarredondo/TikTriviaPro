@@ -9,7 +9,6 @@ Version 1.0
 from __future__ import annotations
 
 from fastapi import APIRouter
-from fastapi import HTTPException
 from source.api.api_response import success
 from source.api.api_response import failure
 
@@ -68,6 +67,14 @@ def board_to_dict(board):
         ],
 
     }
+
+
+def board_to_dict_or_none(board):
+
+    if board is None:
+        return None
+
+    return board_to_dict(board)
 
 
 # ---------------------------------------------------------
@@ -475,7 +482,7 @@ def set_board_source(source: str):
         data={
             "board_source": GAME.board_source,
             "selected_category": GAME.selected_category,
-            "board": board_to_dict(GAME.board),
+            "board": board_to_dict_or_none(GAME.board),
             "deck_status": GAME.random_deck_status(),
         },
 
@@ -507,7 +514,7 @@ def set_category_source(category: str):
         data={
             "board_source": GAME.board_source,
             "selected_category": GAME.selected_category,
-            "board": board_to_dict(GAME.board),
+            "board": board_to_dict_or_none(GAME.board),
             "deck_status": GAME.random_deck_status(),
         },
 

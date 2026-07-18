@@ -6,7 +6,6 @@ const HIDDEN = "████████████████████";
 export default function AnswerPlaque({
     rank,
     answer,
-    points,
     revealed = false,
 }) {
     return (
@@ -27,11 +26,6 @@ export default function AnswerPlaque({
                     : HIDDEN}
             </div>
 
-            <div className="answer-score">
-                {revealed
-                    ? points
-                    : ""}
-            </div>
         </div>
     );
 }

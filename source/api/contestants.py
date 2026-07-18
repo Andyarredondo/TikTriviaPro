@@ -16,12 +16,14 @@ Andy Arredondo
 
 from __future__ import annotations
 
-from pydantic import BaseModel
 from fastapi import APIRouter
 from fastapi import HTTPException
+from pydantic import BaseModel
 
+from source.api.api_response import success
 from source.services.contestant_service import (
     add_contestant,
+    adjust_contestant_score as service_adjust_contestant_score,
     edit_contestant,
     find_contestant,
     list_active_contestants,
@@ -29,12 +31,34 @@ from source.services.contestant_service import (
     remove_contestant,
     reset_contestant_score as service_reset_contestant_score,
     set_contestant_active as service_set_contestant_active,
+    undo_last_score_change as service_undo_last_score_change,
 )
 
 router = APIRouter(
     prefix="/api/contestants",
     tags=["Contestants"],
 )
+
+
+def contestant_to_dict(contestant, include_stats: bool = True):
+    payload = {
+        "id": contestant.id,
+        "username": contestant.username,
+        "display_name": contestant.display_name,
+        "active": contestant.active,
+        "score": contestant.score,
+    }
+
+    if include_stats:
+        payload.update(
+            {
+                "games_played": contestant.games_played,
+                "correct_answers": contestant.correct_answers,
+                "fastest_response_ms": contestant.fastest_response_ms,
+            }
+        )
+
+    return payload
 
 
 # ----------------------------------------------------------
@@ -56,41 +80,21 @@ class ContestantUpdateRequest(BaseModel):
 
     active: bool
 
+class ContestantScoreRequest(BaseModel):
 
+    amount: int
 # ----------------------------------------------------------
 # GET ALL
 # ----------------------------------------------------------
 
 @router.get("/")
 async def get_contestants():
-
-    contestants = list_contestants()
-
-    return [
-
-        {
-
-            "id": contestant.id,
-
-            "username": contestant.username,
-
-            "display_name": contestant.display_name,
-
-            "active": contestant.active,
-
-            "score": contestant.score,
-
-            "games_played": contestant.games_played,
-
-            "correct_answers": contestant.correct_answers,
-
-            "fastest_response_ms": contestant.fastest_response_ms,
-
-        }
-
-        for contestant in contestants
-
-    ]
+    return success(
+        [
+            contestant_to_dict(contestant)
+            for contestant in list_contestants()
+        ]
+    )
 
 
 # ----------------------------------------------------------
@@ -99,26 +103,15 @@ async def get_contestants():
 
 @router.get("/active")
 async def get_active_contestants():
-
-    contestants = list_active_contestants()
-
-    return [
-
-        {
-
-            "id": contestant.id,
-
-            "username": contestant.username,
-
-            "display_name": contestant.display_name,
-
-            "score": contestant.score,
-
-        }
-
-        for contestant in contestants
-
-    ]
+    return success(
+        [
+            contestant_to_dict(
+                contestant,
+                include_stats=False,
+            )
+            for contestant in list_active_contestants()
+        ]
+    )
 
 
 # ----------------------------------------------------------
@@ -144,25 +137,7 @@ async def get_contestant(
 
         )
 
-    return {
-
-        "id": contestant.id,
-
-        "username": contestant.username,
-
-        "display_name": contestant.display_name,
-
-        "active": contestant.active,
-
-        "score": contestant.score,
-
-        "games_played": contestant.games_played,
-
-        "correct_answers": contestant.correct_answers,
-
-        "fastest_response_ms": contestant.fastest_response_ms,
-
-    }
+    return success(contestant_to_dict(contestant))
 
 
 # ----------------------------------------------------------
@@ -182,21 +157,12 @@ async def create_contestant(
 
     )
 
-    return {
-
-        "success": True,
-
-        "contestant": {
-
-            "id": contestant.id,
-
-            "username": contestant.username,
-
-            "display_name": contestant.display_name,
-
-        }
-
-    }
+    return success(
+        contestant_to_dict(
+            contestant,
+            include_stats=False,
+        )
+    )
 
 
 # ----------------------------------------------------------
@@ -224,26 +190,79 @@ async def update_contestant(
 
     )
 
-    return {
-
-        "success": True,
-
-        "contestant": {
-
-            "id": contestant.id,
-
-            "username": contestant.username,
-
-            "display_name": contestant.display_name,
-
-            "active": contestant.active,
-
-        }
-
-    }
-
+    return success(
+        contestant_to_dict(
+            contestant,
+            include_stats=False,
+        )
+    )
 
 # ----------------------------------------------------------
+# ADJUST SCORE
+# ----------------------------------------------------------
+
+@router.post("/{contestant_id}/adjust-score")
+async def adjust_score(
+    contestant_id: int,
+    request: ContestantScoreRequest,
+):
+
+    contestant = find_contestant(contestant_id)
+
+    if contestant is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Contestant not found.",
+        )
+
+    contestant = service_adjust_contestant_score(
+        contestant_id=contestant_id,
+        amount=request.amount,
+    )
+
+    return success(
+        contestant_to_dict(
+            contestant,
+            include_stats=False,
+        )
+    )
+# ----------------------------------------------------------
+# UNDO LAST SCORE CHANGE
+# ----------------------------------------------------------
+
+@router.post("/{contestant_id}/undo-last-score")
+async def undo_last_score(
+    contestant_id: int,
+):
+
+    contestant = find_contestant(contestant_id)
+
+    if contestant is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Contestant not found.",
+        )
+
+    contestant = service_undo_last_score_change(
+        contestant_id=contestant_id,
+    )
+
+    if contestant is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail="No score change is available to undo.",
+        )
+
+    return success(
+        contestant_to_dict(
+            contestant,
+            include_stats=False,
+        )
+    )
+
 # RESET SCORE
 # ----------------------------------------------------------
 
@@ -267,16 +286,12 @@ async def reset_contestant_score(
         contestant_id=contestant_id,
     )
 
-    return {
-        "success": True,
-        "contestant": {
-            "id": contestant.id,
-            "username": contestant.username,
-            "display_name": contestant.display_name,
-            "active": contestant.active,
-            "score": contestant.score,
-        },
-    }
+    return success(
+        contestant_to_dict(
+            contestant,
+            include_stats=False,
+        )
+    )
 
 
 # ----------------------------------------------------------
@@ -305,16 +320,12 @@ async def set_contestant_active(
         active=active,
     )
 
-    return {
-        "success": True,
-        "contestant": {
-            "id": contestant.id,
-            "username": contestant.username,
-            "display_name": contestant.display_name,
-            "active": contestant.active,
-            "score": contestant.score,
-        },
-    }
+    return success(
+        contestant_to_dict(
+            contestant,
+            include_stats=False,
+        )
+    )
 
 
 # ----------------------------------------------------------
@@ -344,8 +355,4 @@ async def delete_contestant(
         contestant_id
     )
 
-    return {
-
-        "success": True
-
-    }
+    return success(None)
